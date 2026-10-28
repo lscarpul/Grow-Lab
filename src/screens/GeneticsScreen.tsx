@@ -5,8 +5,9 @@ import Animated, { FadeInUp, FadeOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Donut, Radar, RangeBar } from '../components/charts';
 import { Drawer } from '../components/Drawer';
+import { yieldLevel } from '../lib/growplan';
 import { Disclaimer, Enter, Screen } from '../components/layout';
-import { Badge, Bullet, ChipRow, cn, Divider, Eyebrow, Glass, KeyValue, Segmented, T, tap, TrendPill } from '../components/ui';
+import { Badge, Bullet, ChipRow, cn, Divider, Eyebrow, Glass, KeyValue, LevelScale, Segmented, T, tap, TrendPill } from '../components/ui';
 import { Cultivar, CULTIVARS, cultivarScores } from '../data/cultivars';
 import { strainById } from '../data/strains';
 import { StrainTypeId } from '../data/types';
@@ -138,7 +139,7 @@ export function GeneticsScreen() {
               tap();
               if (compare.length >= 2) setCompareOpen(true);
             }}
-            className="flex-row items-center rounded-2xl border border-white/15 bg-[#13201F] px-4 py-3 active:opacity-70 active:scale-[0.97]"
+            className="flex-row items-center rounded-2xl border border-white/15 bg-[#13201F] px-4 py-3 active:scale-[0.97] active:opacity-70"
             style={{ shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 18, elevation: 12 }}
           >
             <GitCompareArrows size={18} color={C.leaf} />
@@ -148,7 +149,7 @@ export function GeneticsScreen() {
                 {compare.map((id) => CULTIVARS.find((c) => c.id === id)?.name).join(' · ')}
               </T>
             </View>
-            <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={() => setCompare([])} hitSlop={10}>
+            <Pressable className="active:scale-[0.97] active:opacity-70" onPress={() => setCompare([])} hitSlop={10}>
               <T className="font-inter-sb text-xs text-[#8A9A93]">Annulla</T>
             </Pressable>
           </Pressable>
@@ -176,7 +177,7 @@ function CultivarCard({
   const selected = compareIndex >= 0;
   const flower = c.seedToHarvestDays ?? c.floweringDays;
   return (
-    <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={onPress} onLongPress={onLongPress} delayLongPress={300}>
+    <Pressable className="active:scale-[0.97] active:opacity-70" onPress={onPress} onLongPress={onLongPress} delayLongPress={300}>
       <Glass className="p-4" style={selected ? { borderColor: COMPARE_COLORS[compareIndex], borderWidth: 1.5 } : undefined}>
         <View className="flex-row items-start">
           <View className="flex-1">
@@ -210,7 +211,12 @@ function CultivarCard({
             label={c.seedToHarvestDays ? 'Seme→raccolta' : 'Fioritura'}
             value={`${Math.round(flower[0] / 7)}–${Math.round(flower[1] / 7)} sett.`}
           />
-          <Stat label="Resa g/m²" value={`${c.yieldIndoor[0]}–${c.yieldIndoor[1]}`} />
+          <View className="flex-1 rounded-xl bg-white/[0.035] px-2.5 py-2">
+            <T className="text-[9.5px] text-[#8A9A93]">Resa</T>
+            <View className="mt-1">
+              <LevelScale level={yieldLevel(c).level} label={yieldLevel(c).label} small />
+            </View>
+          </View>
         </View>
 
         <View className="mt-3 flex-row items-center justify-between border-t border-white/[0.05] pt-3">
@@ -224,7 +230,7 @@ function CultivarCard({
               onPress={onLongPress}
               accessibilityLabel={`Confronta ${c.name}`}
               hitSlop={8}
-              className="h-8 w-8 items-center justify-center rounded-xl border active:opacity-70 active:scale-[0.97]"
+              className="h-8 w-8 items-center justify-center rounded-xl border active:scale-[0.97] active:opacity-70"
               style={{
                 borderColor: selected ? COMPARE_COLORS[compareIndex] : 'rgba(255,255,255,0.1)',
                 backgroundColor: selected ? alpha(COMPARE_COLORS[compareIndex], 0.15) : 'rgba(255,255,255,0.04)',
@@ -297,9 +303,14 @@ function CultivarDrawer({ c, onClose }: { c: Cultivar | null; onClose: () => voi
     >
       <View className="mx-5 flex-row gap-3">
         {[
-          { label: 'Grow', value: c.community.grows.toLocaleString('it-IT'), trend: c.community.trend },
+          {
+            label: 'Grow',
+            value: c.community.grows.toLocaleString('it-IT'),
+            trend: c.community.trend,
+            unit: undefined as string | undefined,
+          },
           { label: 'Successo', value: `${c.community.successRate}%`, trend: null },
-          { label: 'Resa media', value: `${c.community.avgYield}`, unit: 'g/m²', trend: null },
+          { label: 'Resa', value: yieldLevel(c).label, trend: null },
         ].map((k) => (
           <Glass key={k.label} className="flex-1 p-3">
             <Eyebrow className="text-[9px]">{k.label}</Eyebrow>
@@ -386,7 +397,7 @@ function CultivarDrawer({ c, onClose }: { c: Cultivar | null; onClose: () => voi
             {c.seedToHarvestDays && (
               <KeyValue label="Dal seme alla raccolta" value={`${c.seedToHarvestDays[0]}–${c.seedToHarvestDays[1]} giorni`} />
             )}
-            <KeyValue label="Resa" value={`${c.yieldIndoor[0]}–${c.yieldIndoor[1]} g/m²`} accent={C.leaf} />
+            <KeyValue label="Resa (scala 1–5)" value={`${yieldLevel(c).level}/5 · ${yieldLevel(c).label}`} accent={C.leaf} />
             <KeyValue label="Altezza" value={`${c.heightIndoor[0]}–${c.heightIndoor[1]} cm`} />
             <KeyValue label="Allungamento in fioritura" value={`×${fmtNum(c.stretch, 1)}`} />
             <KeyValue label="Resistenza parassiti" value={`${c.pestResistance}/5`} />
@@ -394,7 +405,7 @@ function CultivarDrawer({ c, onClose }: { c: Cultivar | null; onClose: () => voi
         ) : (
           <>
             <KeyValue label="Raccolta (Italia)" value={c.outdoorHarvest} accent={C.amber} />
-            <KeyValue label="Resa per pianta" value={`${c.yieldOutdoor[0]}–${c.yieldOutdoor[1]} g`} accent={C.leaf} />
+            <KeyValue label="Resa (scala 1–5)" value={`${yieldLevel(c).level}/5 · ${yieldLevel(c).label}`} accent={C.leaf} />
             <KeyValue label="Resistenza al freddo" value={`${c.coldTolerance}/5`} />
             <KeyValue label="Resistenza muffa" value={`${c.moldResistance}/5`} />
           </>
@@ -440,7 +451,7 @@ function CompareDrawer({ ids, open, onClose }: { ids: string[]; open: boolean; o
     );
   const axes = cultivarScores(items[0]).map((s) => s.label);
   const rows: { label: string; get: (c: Cultivar) => number; fmt: (c: Cultivar) => string; best: 'max' | 'min' }[] = [
-    { label: 'Resa indoor', get: (c) => avg(c.yieldIndoor), fmt: (c) => `${c.yieldIndoor[0]}–${c.yieldIndoor[1]} g/m²`, best: 'max' },
+    { label: 'Resa indoor', get: (c) => avg(c.yieldIndoor), fmt: (c) => `${yieldLevel(c).level}/5 ${yieldLevel(c).label}`, best: 'max' },
     { label: 'Fioritura', get: (c) => avg(c.floweringDays), fmt: (c) => `${c.floweringDays[0]}–${c.floweringDays[1]} gg`, best: 'min' },
     { label: 'Altezza indoor', get: (c) => avg(c.heightIndoor), fmt: (c) => `${c.heightIndoor[0]}–${c.heightIndoor[1]} cm`, best: 'min' },
     { label: 'THC', get: (c) => avg(c.thc), fmt: (c) => `${c.thc[0]}–${c.thc[1]}%`, best: 'max' },

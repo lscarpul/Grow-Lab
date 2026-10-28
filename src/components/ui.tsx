@@ -181,7 +181,7 @@ export function ChipRow<V extends string>({
               tap();
               onToggle(o.value);
             }}
-            className="flex-row items-center rounded-full px-3.5 py-2 active:opacity-70 active:scale-[0.97]"
+            className="flex-row items-center rounded-full px-3.5 py-2 active:scale-[0.97] active:opacity-70"
             style={{
               backgroundColor: active ? alpha(c, 0.16) : 'rgba(255,255,255,0.04)',
               borderWidth: 1,
@@ -263,7 +263,7 @@ export function Segmented<V extends string>({
               tap();
               onChange(o.value);
             }}
-            className="flex-1 flex-row items-center justify-center py-2 active:opacity-70 active:scale-[0.97]"
+            className="flex-1 flex-row items-center justify-center py-2 active:scale-[0.97] active:opacity-70"
           >
             {o.icon}
             <T
@@ -352,7 +352,8 @@ export function Stepper({
   };
   const atMin = value - step < min - 1e-9;
   const atMax = value + step > max + 1e-9;
-  const btn = 'h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] active:scale-90 active:bg-white/[0.12]';
+  const btn =
+    'h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] active:scale-90 active:bg-white/[0.12]';
   return (
     <View className={cn('rounded-2xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5', className)}>
       <T className="text-2xs text-[#8A9A93]">{label}</T>
@@ -363,7 +364,7 @@ export function Stepper({
           disabled={atMin}
           onPress={() => set(value - step)}
           hitSlop={6}
-          className={cn('active:opacity-70 active:scale-[0.97]', btn, atMin && 'opacity-40')}
+          className={cn('active:scale-[0.97] active:opacity-70', btn, atMin && 'opacity-40')}
         >
           <Minus size={14} color="#C9D4CF" />
         </Pressable>
@@ -378,7 +379,7 @@ export function Stepper({
           disabled={atMax}
           onPress={() => set(value + step)}
           hitSlop={6}
-          className={cn('active:opacity-70 active:scale-[0.97]', btn, atMax && 'opacity-40')}
+          className={cn('active:scale-[0.97] active:opacity-70', btn, atMax && 'opacity-40')}
         >
           <Plus size={14} color="#C9D4CF" />
         </Pressable>
@@ -414,7 +415,12 @@ export function Button({
         tap();
         onPress();
       }}
-      className={cn('active:opacity-70 active:scale-[0.97]', 'flex-row items-center justify-center rounded-2xl px-4 py-3', disabled && 'opacity-40', className)}
+      className={cn(
+        'active:scale-[0.97] active:opacity-70',
+        'flex-row items-center justify-center rounded-2xl px-4 py-3',
+        disabled && 'opacity-40',
+        className,
+      )}
       style={{
         backgroundColor: primary ? color : alpha(color, 0.1),
         borderWidth: 1,
@@ -425,6 +431,80 @@ export function Button({
       <T className={cn('font-inter-b text-[13px]', icon ? 'ml-2' : '')} style={{ color: primary ? '#05080A' : color }}>
         {label}
       </T>
+    </Pressable>
+  );
+}
+
+/** 1–5 scale shown as filled bars with a word, used where grams would be misleading. */
+export function LevelScale({ level, label, color = C.leaf, small }: { level: number; label: string; color?: string; small?: boolean }) {
+  return (
+    <View className="flex-row items-center">
+      <View className="flex-row gap-[3px]">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <View
+            key={n}
+            style={{
+              width: small ? 7 : 9,
+              height: small ? 7 : 9,
+              borderRadius: 3,
+              backgroundColor: n <= level ? color : 'rgba(255,255,255,0.10)',
+            }}
+          />
+        ))}
+      </View>
+      <T className={cn('ml-2 font-inter-sb', small ? 'text-2xs' : 'text-xs')} style={{ color }}>
+        {label}
+      </T>
+    </View>
+  );
+}
+
+/** Labelled on/off switch row. */
+export function ToggleRow({
+  label,
+  caption,
+  value,
+  onChange,
+  color = C.leaf,
+}: {
+  label: string;
+  caption?: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  color?: string;
+}) {
+  const x = useRef(new Animated.Value(value ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.spring(x, { toValue: value ? 1 : 0, damping: 16, stiffness: 220, useNativeDriver: true }).start();
+  }, [value, x]);
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
+      onPress={() => {
+        tap();
+        onChange(!value);
+      }}
+      className="flex-row items-center rounded-2xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-3 active:opacity-80"
+    >
+      <View className="flex-1 pr-3">
+        <T className="font-inter-sb text-[13px]">{label}</T>
+        {caption && <T className="mt-0.5 text-2xs text-[#8A9A93]">{caption}</T>}
+      </View>
+      <View
+        className="h-7 w-12 justify-center rounded-full px-[3px]"
+        style={{ backgroundColor: value ? alpha(color, 0.35) : 'rgba(255,255,255,0.10)' }}
+      >
+        <Animated.View
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            backgroundColor: value ? color : '#8A9A93',
+            transform: [{ translateX: x.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }) }],
+          }}
+        />
+      </View>
     </Pressable>
   );
 }

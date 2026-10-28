@@ -24,6 +24,7 @@ import { stageById } from '../data/stages';
 import { cycleProgress, envScore, latest, metricTrend, plantAlerts, plantTasks, series, stageProgress } from '../lib/insights';
 import { daysBetween, fmtDate, fmtNum, fmtTime, relativeDay } from '../lib/math';
 import { NewMeasurement, useStore } from '../state/store';
+import { nutrientById } from '../data/nutrients';
 import { alpha, C, METRIC_COLOR, STAGE_COLOR } from '../theme/tokens';
 
 export const LOG_META: Record<LogKind, { label: string; color: string; Icon: typeof Droplets }> = {
@@ -252,7 +253,7 @@ export function PlantDrawer({ plant, onClose }: { plant: Plant | null; onClose: 
                   tap();
                   setMetric(k);
                 }}
-                className="rounded-full px-3 py-1.5 active:opacity-70 active:scale-[0.97]"
+                className="rounded-full px-3 py-1.5 active:scale-[0.97] active:opacity-70"
                 style={{
                   backgroundColor: k === m ? alpha(METRIC_COLOR[k], 0.16) : 'rgba(255,255,255,0.04)',
                   borderWidth: 1,
@@ -381,7 +382,7 @@ export function PlantDrawer({ plant, onClose }: { plant: Plant | null; onClose: 
                   tap();
                   addLog(p.id, q.kind, q.title, q.detail);
                 }}
-                className="flex-row items-center rounded-full px-3 py-2 active:opacity-70 active:scale-[0.97]"
+                className="flex-row items-center rounded-full px-3 py-2 active:scale-[0.97] active:opacity-70"
                 style={{ backgroundColor: alpha(meta.color, 0.1), borderWidth: 1, borderColor: alpha(meta.color, 0.3) }}
               >
                 <meta.Icon size={13} color={meta.color} />
@@ -514,6 +515,11 @@ function MeasureForm({
   onSave: (m: NewMeasurement) => void;
   onCancel: () => void;
 }) {
+  const { kit } = useStore();
+  const line = nutrientById(kit.nutrient?.line);
+  // Set in Kit > Nutrienti: mineral feeds make pH mandatory, EC only shows in advanced mode.
+  const phRequired = line?.type === 'Minerale';
+  const ecVisible = !line || !!kit.advanced;
   const r = STAGE_RANGES[plant.stage];
   const mid = (k: MetricKey, fallback: number) => (r[k] ? (r[k]![0] + r[k]![1]) / 2 : fallback);
   const [temp, setTemp] = useState(last?.temp ?? Math.round(mid('temp', 24)));
@@ -521,9 +527,10 @@ function MeasureForm({
   const [ph, setPh] = useState(last?.ph ?? Math.round(mid('ph', 6.2) * 10) / 10);
   const [ec, setEc] = useState(last?.ec ?? Math.round(mid('ec', 1.2) * 10) / 10);
   const [height, setHeight] = useState(last?.height ?? 10);
-  const [include, setInclude] = useState<Optional[]>(['ph', 'ec', 'height']);
-  const on = (k: Optional) => include.includes(k);
+  const [include, setInclude] = useState<Optional[]>(ecVisible ? ['ph', 'ec', 'height'] : ['ph', 'height']);
+  const on = (k: Optional) => (k === 'ph' && phRequired) || (k === 'ec' ? ecVisible && include.includes(k) : include.includes(k));
   const toggle = (k: Optional) => setInclude((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
+  const chips: Optional[] = ecVisible ? ['ph', 'ec', 'height'] : ['ph', 'height'];
   const leafVpd = (() => {
     const es = (t: number) => 0.6108 * Math.exp((17.27 * t) / (t + 237.3));
     return Math.max(0, es(temp - 2) - es(temp) * (rh / 100));
@@ -557,14 +564,16 @@ function MeasureForm({
         <Stepper className="flex-1" label="Umidità" value={rh} onChange={setRh} min={15} max={99} unit="%" color={METRIC_COLOR.rh} />
       </View>
       <View className="mt-3 flex-row flex-wrap gap-1.5">
-        {(['ph', 'ec', 'height'] as Optional[]).map((k) => (
+        {chips.map((k) => (
           <Pressable
             key={k}
+            disabled={k === 'ph' && phRequired}
             onPress={() => {
               tap();
               toggle(k);
             }}
-            className={cn('active:opacity-70 active:scale-[0.97]', 
+            className={cn(
+              'active:scale-[0.97] active:opacity-70',
               'rounded-full border px-3 py-1.5',
               on(k) ? 'border-[#38BDF8]/50 bg-[#38BDF8]/15' : 'border-white/10 bg-white/[0.03]',
             )}
@@ -572,6 +581,7 @@ function MeasureForm({
             <T className="font-inter-sb text-2xs" style={{ color: on(k) ? C.sky : '#8A9A93' }}>
               {on(k) ? '✓ ' : '+ '}
               {k === 'height' ? 'Altezza' : METRICS[k].short}
+              {k === 'ph' ? (phRequired ? ' · obbligatorio' : line ? ' · opzionale' : '') : ''}
             </T>
           </Pressable>
         ))}

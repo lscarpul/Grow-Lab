@@ -1,9 +1,11 @@
+import { nutrientById, nutrientCost, PACK_LABEL, PackId, SUBSTRATE_DEMAND } from './nutrients';
 import { picksFor, ShopPick } from './shop';
 
 export type SpaceId = 'tenda60' | 'tenda80' | 'tenda100' | 'tenda120' | 'balcone' | 'giardino';
 export type Budget = 'base' | 'medio' | 'pro';
 export type GrowKind = 'auto' | 'foto';
-export type Medium = 'terra' | 'cocco';
+export type Medium = 'terra-ricca' | 'terra' | 'cocco';
+export type Technique = 'seme' | 'talea' | 'scrog' | 'sog';
 
 export interface KitConfig {
   space: SpaceId;
@@ -11,9 +13,18 @@ export interface KitConfig {
   plants: number;
   kind: GrowKind;
   medium: Medium;
+  /** Lamp wattage picked from the guided presets; unset = not chosen yet (the kit uses the budget default). */
+  ledW?: number;
+  kwhPrice?: number; // €/kWh
+  nutrient?: { line: string; pack: PackId };
+  advanced?: boolean; // EC control unlocked
+  technique?: Technique;
+  cultivarId?: string; // strain used for the final yield estimate
+  dehumidifier?: boolean;
+  heater?: boolean;
 }
 
-export const DEFAULT_KIT: KitConfig = { space: 'tenda80', budget: 'medio', plants: 3, kind: 'foto', medium: 'terra' };
+export const DEFAULT_KIT: KitConfig = { space: 'tenda80', budget: 'medio', plants: 3, kind: 'foto', medium: 'terra', kwhPrice: 0.3 };
 
 export interface Space {
   id: SpaceId;
@@ -96,7 +107,7 @@ export function kitStats(c: KitConfig): KitStats {
   const area = (w * d) / 10000;
   const volume = (w * d * h) / 1_000_000;
   const ledRaw = area * W_PER_M2[c.budget];
-  const ledW = space.indoor ? Math.max(100, Math.round(ledRaw / 10) * 10) : 0;
+  const ledW = space.indoor ? (c.ledW ?? Math.max(100, Math.round(ledRaw / 10) * 10)) : 0;
   const ppfd = space.indoor ? Math.round(((ledW * EFFICACY[c.budget]) / area) * 0.85) : 0;
   // One full air exchange per minute + 30% for carbon filter and duct losses.
   const fanM3h = space.indoor ? Math.round(volume * 60 * 1.3) : 0;
@@ -299,7 +310,9 @@ export function buildKit(c: KitConfig): KitItem[] {
         ? 'Fibra di cocco + perlite'
         : space.id === 'giardino'
           ? 'Humus di lombrico'
-          : 'Terriccio leggermente concimato',
+          : c.medium === 'terra-ricca'
+            ? 'Terriccio ricco pre-concimato (all-mix)'
+            : 'Terriccio leggermente concimato',
     category: 'Vasi e substrato',
     priority: 'Essenziale',
     qty: Math.ceil(s.substrateL / 50),
@@ -308,11 +321,13 @@ export function buildKit(c: KitConfig): KitItem[] {
       c.medium === 'cocco' && space.indoor
         ? `${s.substrateL} L totali · 70% cocco, 30% perlite`
         : `${s.substrateL} L totali · con 20–30% di perlite`,
-    unitPrice: P(12, 18, 26),
+    unitPrice: c.medium === 'terra-ricca' ? P(18, 26, 34) : P(12, 18, 26),
     why:
-      c.medium === 'cocco'
-        ? 'Il cocco cresce più veloce e perdona i ristagni, ma richiede concime a ogni annaffiatura.'
-        : 'Il terriccio fa da "cuscinetto": più tollerante agli errori, ideale per iniziare.',
+      c.medium === 'terra-ricca'
+        ? 'Contiene già concime per 3–4 settimane: meno nutrienti da comprare, ma va bene solo da vegetativa in poi.'
+        : c.medium === 'cocco'
+          ? 'Il cocco cresce più veloce e perdona i ristagni, ma richiede concime a ogni annaffiatura.'
+          : 'Il terriccio fa da "cuscinetto": più tollerante agli errori, ideale per iniziare.',
     lookFor: ['Substrato specifico "light mix" o con perlite', 'Cocco lavato e tamponato (buffered)'],
     avoid: ['Terriccio universale molto concimato per le piantine', 'Cocco non tamponato: blocca calcio e magnesio'],
     when: 'Semina o trapianto',
@@ -331,24 +346,49 @@ export function buildKit(c: KitConfig): KitItem[] {
     avoid: ['Lasciare acqua stagnante nel sottovaso: svuotalo dopo 30 minuti'],
     when: 'Semina o trapianto',
   });
+  const line = nutrientById(c.nutrient?.line);
+  const feed = line && c.nutrient ? nutrientCost(line, c.nutrient.pack, c.medium, n) : null;
   add({
     id: 'nutrienti',
-    name:
-      c.medium === 'cocco' && space.indoor
+    name: line
+      ? `${line.brand} ${line.line}`
+      : c.medium === 'cocco' && space.indoor
         ? 'Nutrienti per cocco A+B'
         : space.indoor
           ? 'Linea nutrienti crescita + fioritura'
           : 'Concime organico granulare + liquido fioritura',
     category: 'Nutrienti',
     priority: 'Essenziale',
-    qty: 1,
-    unit: 'set',
-    spec: base ? 'Bottiglie da 1 L' : pro ? 'Linea completa da 1 L con stimolatori' : 'Bottiglie da 1 L',
-    unitPrice: P(28, 55, 120),
-    why: 'Forniscono azoto in vegetativa e fosforo/potassio in fioritura, nelle giuste proporzioni.',
+    qty: feed ? feed.packs : 1,
+    unit: feed ? 'pacchetti' : 'set',
+    spec:
+      line && c.nutrient
+        ? `${line.type} · pacchetto ${PACK_LABEL[c.nutrient.pack]} · ${SUBSTRATE_DEMAND[c.medium].label}`
+        : base
+          ? 'Bottiglie da 1 L'
+          : pro
+            ? 'Linea completa da 1 L con stimolatori'
+            : 'Bottiglie da 1 L',
+    unitPrice:
+      line && c.nutrient
+        ? (() => {
+            const v = line.packs.find((x) => x.id === c.nutrient!.pack)!.price;
+            return P(v, v, v);
+          })()
+        : P(
+            Math.round(28 * SUBSTRATE_DEMAND[c.medium].factor),
+            Math.round(55 * SUBSTRATE_DEMAND[c.medium].factor),
+            Math.round(120 * SUBSTRATE_DEMAND[c.medium].factor),
+          ),
+    why:
+      c.medium === 'terra-ricca'
+        ? 'Con la terra ricca servono meno nutrienti: si parte dalla 3ª–4ª settimana.'
+        : c.medium === 'cocco'
+          ? 'Il cocco è inerte: tutto il nutrimento arriva dal concime, a ogni annaffiatura.'
+          : 'Forniscono azoto in vegetativa e fosforo/potassio in fioritura, nelle giuste proporzioni.',
     lookFor: ['Tabella di dosaggio chiara per settimana', 'Microelementi chelati inclusi'],
     avoid: ["Mischiare marchi diversi senza conoscere l'EC risultante"],
-    when: 'Dalla 2ª settimana di vegetativa',
+    when: c.medium === 'terra-ricca' ? 'Dalla 3ª–4ª settimana' : 'Dalla 2ª settimana di vegetativa',
   });
   add(
     (c.medium === 'cocco' || space.indoor) && {
@@ -386,7 +426,8 @@ export function buildKit(c: KitConfig): KitItem[] {
     id: 'phmetro',
     name: 'pHmetro digitale',
     category: 'Misura e controllo',
-    priority: 'Essenziale',
+    // Mineral feeds lock out quickly off-range; organic ones are buffered by the soil life.
+    priority: line?.type === 'Organico' && c.medium !== 'cocco' ? 'Consigliato' : 'Essenziale',
     qty: 1,
     unit: 'pz',
     spec: 'Precisione ±0,1 · compensazione temperatura · con soluzioni di taratura',
@@ -400,7 +441,7 @@ export function buildKit(c: KitConfig): KitItem[] {
     id: 'phdown',
     name: 'Regolatore pH- (pH down)',
     category: 'Misura e controllo',
-    priority: 'Essenziale',
+    priority: line?.type === 'Organico' && c.medium !== 'cocco' ? 'Consigliato' : 'Essenziale',
     qty: 1,
     unit: 'pz',
     spec: '250–500 ml · acido fosforico',
@@ -411,11 +452,11 @@ export function buildKit(c: KitConfig): KitItem[] {
     when: 'Prima della semina',
   });
   add(
-    (c.medium === 'cocco' || !base) && {
+    (c.medium === 'cocco' || !base || !!c.advanced) && {
       id: 'ecmetro',
       name: 'Conduttivimetro (EC)',
       category: 'Misura e controllo',
-      priority: c.medium === 'cocco' ? 'Essenziale' : 'Consigliato',
+      priority: c.medium === 'cocco' || c.advanced ? 'Essenziale' : 'Consigliato',
       qty: 1,
       unit: 'pz',
       spec: 'Lettura in mS/cm · ATC · soluzione 1,413',

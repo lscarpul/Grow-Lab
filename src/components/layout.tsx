@@ -1,4 +1,5 @@
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { BookOpen, Dna, House, ScanLine, ShoppingBag, Sprout } from 'lucide-react-native';
 import { ReactNode } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -47,21 +48,37 @@ export function Screen({
 }) {
   const insets = useSafeAreaInsets();
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: insets.bottom + 120 }}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Enter className="flex-row items-end justify-between px-5">
-        <View className="flex-1 pr-3">
-          <Eyebrow>{eyebrow}</Eyebrow>
-          <T className="mt-1 font-grotesk-b text-[32px] leading-[36px] tracking-[-1px]">{title}</T>
-          {subtitle && <T className="mt-1.5 text-[13px] leading-[19px] text-[#8A9A93]">{subtitle}</T>}
-        </View>
-        {right}
-      </Enter>
-      {children}
-    </ScrollView>
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: insets.top + 14, paddingBottom: insets.bottom + 120 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Enter className="flex-row items-end justify-between px-5">
+          <View className="flex-1 pr-3">
+            <Eyebrow>{eyebrow}</Eyebrow>
+            <T className="mt-1 font-grotesk-b text-[32px] leading-[36px] tracking-[-1px]">{title}</T>
+            {subtitle && <T className="mt-1.5 text-[13px] leading-[19px] text-[#8A9A93]">{subtitle}</T>}
+          </View>
+          {right}
+        </Enter>
+        {children}
+      </ScrollView>
+      <StatusScrim height={insets.top} />
+    </View>
+  );
+}
+
+/** Fades content out under the translucent status bar so the clock never sits on top of text. */
+export function StatusScrim({ height }: { height: number }) {
+  if (!height) return null;
+  return (
+    <LinearGradient
+      pointerEvents="none"
+      colors={['#05080A', 'rgba(5,8,10,0.92)', 'rgba(5,8,10,0)']}
+      locations={[0, 0.7, 1]}
+      style={{ position: 'absolute', left: 0, right: 0, top: 0, height: height + 14 }}
+    />
   );
 }
 
@@ -111,7 +128,11 @@ export function TabBar({ tab, onChange, badges }: { tab: TabId; onChange: (t: Ta
                 tap();
                 onChange(id);
               }}
-              className={cn('active:opacity-70 active:scale-[0.97]', 'flex-1 items-center rounded-[22px] py-2', active && 'bg-[#34D88A]/[0.14]')}
+              className={cn(
+                'active:scale-[0.97] active:opacity-70',
+                'flex-1 items-center rounded-[22px] py-2',
+                active && 'bg-[#34D88A]/[0.14]',
+              )}
             >
               <View>
                 <Icon size={20} color={active ? '#34D88A' : '#7D8C86'} strokeWidth={active ? 2.3 : 1.8} />
@@ -142,7 +163,8 @@ export function IconButton({ children, onPress, active }: { children: ReactNode;
         tap();
         onPress?.();
       }}
-      className={cn('active:opacity-70 active:scale-[0.97]', 
+      className={cn(
+        'active:scale-[0.97] active:opacity-70',
         'h-11 w-11 items-center justify-center rounded-2xl border',
         active ? 'border-[#34D88A]/40 bg-[#34D88A]/15' : 'border-white/10 bg-white/[0.05]',
       )}

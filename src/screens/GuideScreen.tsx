@@ -1,22 +1,31 @@
-import { ArrowRight, Building2, CircleAlert, Sun } from 'lucide-react-native';
+import { ArrowRight, Building2, CircleAlert, Droplets, Package, Scissors, Stethoscope, Sun } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { RangeBar } from '../components/charts';
 import { Drawer } from '../components/Drawer';
 import { Disclaimer, Enter, Screen } from '../components/layout';
 import { OutdoorCalendar } from './OutdoorCalendar';
-import { Badge, Bullet, ChipRow, cn, Divider, Eyebrow, Glass, KeyValue, SectionHeader, Segmented, T } from '../components/ui';
+import { Badge, Bullet, ChipRow, cn, Divider, Eyebrow, Glass, KeyValue, SectionHeader, Segmented, T, tap } from '../components/ui';
 import { CULTIVARS } from '../data/cultivars';
 import { METRICS, MetricKey, STAGE_DAYS, STAGE_ORDER, STAGE_RANGES, STAGE_SHORT } from '../data/ranges';
 import { STAGES } from '../data/stages';
 import { STRAINS } from '../data/strains';
+import { Guide, GUIDES, GuideId, guideById } from '../data/guides';
 import { Stage, StrainType } from '../data/types';
 import { fmtNum } from '../lib/math';
 import { alpha, C, METRIC_COLOR, STAGE_COLOR, TYPE_COLOR } from '../theme/tokens';
 
 const DIFF_LEVEL = { Facile: 1, Media: 2, Impegnativa: 3 } as const;
 
-export function GuideScreen() {
+const HUB: { id: GuideId | 'diagnosi'; label: string; caption: string; color: string; Icon: typeof Sun }[] = [
+  { id: 'diagnosi', label: 'Diagnostica', caption: 'Trova il problema dai sintomi', color: C.rose, Icon: Stethoscope },
+  { id: 'raccolta', label: 'Raccolta', caption: 'Quando tagliare: i tricomi', color: C.amber, Icon: Scissors },
+  { id: 'essiccazione', label: 'Essiccazione', caption: '7–14 giorni al buio', color: C.sky, Icon: Droplets },
+  { id: 'concia', label: 'Concia', caption: 'Barattoli e burping', color: C.violet, Icon: Package },
+];
+
+export function GuideScreen({ onOpenDiagnosis }: { onOpenDiagnosis?: () => void }) {
+  const [guide, setGuide] = useState<Guide | null>(null);
   const [mode, setMode] = useState<'fasi' | 'tipi' | 'calendario'>('fasi');
   const [metric, setMetric] = useState<MetricKey>('temp');
   const [stage, setStage] = useState<Stage | null>(null);
@@ -30,7 +39,31 @@ export function GuideScreen() {
         title="Guida"
         subtitle="Tutto il ciclo, dal seme al barattolo, con i parametri ideali per ogni fase e tipologia."
       >
-        <Enter i={1} className="mx-5 mt-5">
+        <Enter i={1} className="mx-5 mt-5 flex-row flex-wrap justify-between gap-y-2.5">
+          {HUB.map((h) => (
+            <Pressable
+              key={h.id}
+              onPress={() => {
+                tap();
+                if (h.id === 'diagnosi') onOpenDiagnosis?.();
+                else setGuide(guideById(h.id));
+              }}
+              className="w-[48.5%] overflow-hidden rounded-[22px] border border-white/[0.08] bg-[#0E161B] p-3.5 active:scale-[0.97] active:opacity-80"
+            >
+              <View className="h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: alpha(h.color, 0.16) }}>
+                <h.Icon size={17} color={h.color} />
+              </View>
+              <T className="mt-2.5 font-inter-sb text-[14px]">{h.label}</T>
+              <T className="mt-0.5 text-2xs text-[#8A9A93]" numberOfLines={1}>
+                {h.caption}
+              </T>
+              <View className="absolute right-3 top-3.5">
+                <ArrowRight size={14} color="#56655F" />
+              </View>
+            </Pressable>
+          ))}
+        </Enter>
+        <Enter i={2} className="mx-5 mt-5">
           <Segmented
             value={mode}
             onChange={setMode}
@@ -131,7 +164,7 @@ export function GuideScreen() {
             <View className="mx-5">
               {STAGES.map((s, i) => (
                 <Enter i={5 + i} key={s.id}>
-                  <Pressable onPress={() => setStage(s)} className="flex-row active:opacity-70 active:scale-[0.97]">
+                  <Pressable onPress={() => setStage(s)} className="flex-row active:scale-[0.97] active:opacity-70">
                     <View className="items-center" style={{ width: 34 }}>
                       <View
                         className="h-[34px] w-[34px] items-center justify-center rounded-full"
@@ -183,7 +216,7 @@ export function GuideScreen() {
                 const n = CULTIVARS.filter((c) => c.tags.includes(s.id)).length;
                 return (
                   <Enter i={2 + i} key={s.id} className={wide ? 'w-full' : 'w-[48.5%]'}>
-                    <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={() => setStrain(s)}>
+                    <Pressable className="active:scale-[0.97] active:opacity-70" onPress={() => setStrain(s)}>
                       <Glass className="p-4" glow={color}>
                         <View className="flex-row items-center justify-between">
                           <View className="h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: alpha(color, 0.15) }}>
@@ -230,6 +263,7 @@ export function GuideScreen() {
       </Screen>
       <StageDrawer stage={stage} onClose={() => setStage(null)} />
       <StrainDrawer strain={strain} onClose={() => setStrain(null)} />
+      <GuideDrawer guide={guide} onClose={() => setGuide(null)} />
     </>
   );
 }
@@ -450,6 +484,79 @@ function StrainDrawer({ strain: s, onClose }: { strain: StrainType | null; onClo
                   {c.floweringDays[0]}–{c.floweringDays[1]} gg
                 </T>
               </View>
+            ))}
+          </View>
+        </View>
+      )}
+    </Drawer>
+  );
+}
+
+const GUIDE_COLOR: Record<GuideId, string> = { raccolta: C.amber, essiccazione: C.sky, concia: C.violet };
+
+function GuideDrawer({ guide: g, onClose }: { guide: Guide | null; onClose: () => void }) {
+  // Keep the last guide while the sheet animates out.
+  const [last, setLast] = useState<Guide | null>(g);
+  if (g && g !== last) setLast(g);
+  const shown = g ?? last;
+  const color = shown ? GUIDE_COLOR[shown.id] : C.leaf;
+  return (
+    <Drawer
+      open={!!g}
+      onClose={onClose}
+      accent={color}
+      header={
+        shown && (
+          <View>
+            <Badge color={color} dot>
+              {shown.duration}
+            </Badge>
+            <T className="mt-2 font-grotesk-b text-[26px] tracking-[-0.6px]">{shown.title}</T>
+            <T className="text-[13px] text-[#8A9A93]">{shown.subtitle}</T>
+          </View>
+        )
+      }
+    >
+      {shown && (
+        <View className="px-5">
+          <Glass className="p-4">
+            <Eyebrow>Valori da tenere</Eyebrow>
+            <View className="mt-2">
+              {shown.target.map((t) => (
+                <KeyValue key={t.label} label={t.label} value={t.value} accent={color} />
+              ))}
+            </View>
+          </Glass>
+          <Eyebrow className="mt-5">Passo per passo</Eyebrow>
+          <View className="mt-3 gap-3">
+            {shown.steps.map((st, i) => (
+              <View key={st.title} className="flex-row">
+                <View className="mr-3 h-7 w-7 items-center justify-center rounded-lg" style={{ backgroundColor: alpha(color, 0.16) }}>
+                  <T className="font-grotesk-b text-xs" style={{ color }}>
+                    {i + 1}
+                  </T>
+                </View>
+                <View className="flex-1">
+                  <T className="font-inter-sb text-[14px]">{st.title}</T>
+                  <T className="mt-0.5 text-[13px] leading-5 text-[#B7C3BE]">{st.text}</T>
+                </View>
+              </View>
+            ))}
+          </View>
+          <Eyebrow className="mt-5">Cosa preparare</Eyebrow>
+          <View className="mt-2 gap-1.5">
+            {shown.checks.map((c) => (
+              <Bullet key={c} color={color}>
+                {c}
+              </Bullet>
+            ))}
+          </View>
+          <Eyebrow className="mt-5">Errori da evitare</Eyebrow>
+          <View className="mt-2 gap-1.5">
+            {shown.mistakes.map((m) => (
+              <Bullet key={m} color={C.rose}>
+                {m}
+              </Bullet>
             ))}
           </View>
         </View>

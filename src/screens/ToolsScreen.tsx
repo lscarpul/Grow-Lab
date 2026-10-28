@@ -8,7 +8,8 @@ import { Calculators } from './Calculators';
 import { SymptomFinder } from './DiagnoseScreen';
 import { PhotoScanner } from './PhotoScanner';
 
-type Mode = 'foto' | 'sintomi' | 'calcoli';
+export type ToolsMode = 'foto' | 'sintomi' | 'calcoli';
+type Mode = ToolsMode;
 
 const SUB: Record<Mode, string> = {
   foto: "Scatta una foto: l'AI riconosce carenze, parassiti e muffe tenendo conto di genetica e fase.",
@@ -16,8 +17,8 @@ const SUB: Record<Mode, string> = {
   calcoli: 'VPD, luce, bolletta e dosi dei concimi: i conti che servono ogni settimana.',
 };
 
-export function ToolsScreen() {
-  const [mode, setMode] = useState<Mode>('foto');
+export function ToolsScreen({ initial = 'foto' }: { initial?: Mode }) {
+  const [mode, setMode] = useState<Mode>(initial);
   const icon = (m: Mode, Icon: typeof ScanLine) => <Icon size={14} color={mode === m ? C.leaf : '#8A9A93'} />;
   return (
     <Screen eyebrow="Strumenti" title="Diagnosi e calcoli" subtitle={SUB[mode]}>

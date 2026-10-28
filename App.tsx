@@ -24,15 +24,17 @@ import { GuideScreen } from './src/screens/GuideScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { KitScreen } from './src/screens/KitScreen';
 import { PlantsScreen } from './src/screens/PlantsScreen';
-import { ToolsScreen } from './src/screens/ToolsScreen';
+import { ToolsMode, ToolsScreen } from './src/screens/ToolsScreen';
 import { StoreProvider, useStore } from './src/state/store';
 
 function Shell() {
   const [tab, setTabState] = useState<TabId>('home');
+  const [toolsMode, setToolsMode] = useState<ToolsMode>('foto');
   // Slide in from the side of the tab that was tapped, so switching tabs reads as moving through the bar.
   const dir = useRef(1);
   const setTab = (t: TabId) => {
     dir.current = TABS.findIndex((x) => x.id === t) >= TABS.findIndex((x) => x.id === tab) ? 1 : -1;
+    if (t !== 'strumenti') setToolsMode('foto');
     setTabState(t);
   };
   const { plants, adult, confirmAdult } = useStore();
@@ -53,8 +55,15 @@ function Shell() {
         {tab === 'piante' && <PlantsScreen />}
         {tab === 'kit' && <KitScreen />}
         {tab === 'genetiche' && <GeneticsScreen />}
-        {tab === 'guida' && <GuideScreen />}
-        {tab === 'strumenti' && <ToolsScreen />}
+        {tab === 'guida' && (
+          <GuideScreen
+            onOpenDiagnosis={() => {
+              setTab('strumenti');
+              setToolsMode('sintomi');
+            }}
+          />
+        )}
+        {tab === 'strumenti' && <ToolsScreen initial={toolsMode} />}
       </Animated.View>
       <TabBar tab={tab} onChange={setTab} badges={{ piante: alertCount }} />
       <LinkSheetHost />

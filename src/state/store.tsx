@@ -235,6 +235,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return [...mine, ...demo];
   }, [demoPlants, userPlants, measures, userLogs, showDemo]);
 
+  // Older saved configs miss the newer fields.
+  const kitFull = useMemo(() => ({ ...DEFAULT_KIT, ...kit }), [kit]);
+
   return (
     <Ctx.Provider
       value={{
@@ -249,7 +252,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         addLog,
         doneTasks,
         toggleTask,
-        kit,
+        kit: kitFull,
         setKit,
         owned,
         toggleOwned,

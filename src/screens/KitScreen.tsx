@@ -5,6 +5,8 @@ import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Donut, Ring } from '../components/charts';
 import { Drawer } from '../components/Drawer';
 import { openLink } from '../components/LinkSheet';
+import { EnergySection, LampSection, NutrientSection, YieldSection } from './GrowPlan';
+import { yieldLevel } from '../lib/growplan';
 import { Disclaimer, Enter, Screen } from '../components/layout';
 import { Badge, Bullet, Button, ChipRow, cn, Eyebrow, Glass, SectionHeader, Segmented, Stepper, T, tap } from '../components/ui';
 import { Cultivar, CULTIVARS } from '../data/cultivars';
@@ -106,7 +108,12 @@ function KitList() {
         selected={[kit.space]}
         onToggle={(v) => {
           const s = SPACES.find((x) => x.id === v)!;
-          set({ space: v, plants: Math.min(kit.plants, s.maxPlants), medium: s.indoor ? kit.medium : 'terra' });
+          set({
+            space: v,
+            plants: Math.min(kit.plants, s.maxPlants),
+            medium: s.indoor || kit.medium !== 'cocco' ? kit.medium : 'terra',
+            ledW: undefined,
+          });
         }}
       />
       <Enter i={2} className="mx-5 mt-3 gap-2">
@@ -136,17 +143,6 @@ function KitList() {
             min={1}
             max={space.maxPlants}
           />
-          {space.indoor && (
-            <Segmented
-              className="flex-1 self-center"
-              value={kit.medium}
-              onChange={(m) => set({ medium: m })}
-              options={[
-                { value: 'terra', label: 'Terra' },
-                { value: 'cocco', label: 'Cocco' },
-              ]}
-            />
-          )}
         </View>
       </Enter>
 
@@ -194,7 +190,7 @@ function KitList() {
               <View className="mt-1 flex-row items-center">
                 <Zap size={11} color={C.lime} />
                 <T className="ml-1 text-2xs text-[#8A9A93]">
-                  ~{stats.monthlyKwh} kWh/mese · {fmtEur(Math.round(stats.monthlyKwh * KWH_EUR))}
+                  ~{stats.monthlyKwh} kWh/mese · {fmtEur(Math.round(stats.monthlyKwh * (kit.kwhPrice ?? KWH_EUR)))}
                 </T>
               </View>
             </Glass>
@@ -207,6 +203,11 @@ function KitList() {
           )}
         </Enter>
       </View>
+
+      <LampSection kit={kit} set={set} />
+      <EnergySection kit={kit} set={set} />
+      <NutrientSection kit={kit} set={set} />
+      <YieldSection kit={kit} set={set} />
 
       {/* Category split */}
       <Enter i={5} className="mx-5 mt-3">
@@ -237,7 +238,8 @@ function KitList() {
         title="Lista della spesa"
         caption="Spunta quello che hai già · tocca per prodotti e consigli"
         right={
-          <Pressable className="active:opacity-70 active:scale-[0.97]"
+          <Pressable
+            className="active:scale-[0.97] active:opacity-70"
             onPress={() => {
               tap();
               setHideOwned(!hideOwned);
@@ -281,7 +283,7 @@ function KitList() {
                           toggleOwned(i.id);
                         }}
                         hitSlop={8}
-                        className="mr-3 h-6 w-6 items-center justify-center rounded-lg border active:opacity-70 active:scale-[0.97]"
+                        className="mr-3 h-6 w-6 items-center justify-center rounded-lg border active:scale-[0.97] active:opacity-70"
                         style={{ borderColor: has ? C.leaf : 'rgba(255,255,255,0.2)', backgroundColor: has ? C.leaf : 'transparent' }}
                       >
                         {has && (
@@ -291,7 +293,7 @@ function KitList() {
                         )}
                       </Pressable>
                       <Pressable
-                        className={cn('flex-1 active:opacity-70 active:scale-[0.97]', has && 'opacity-50')}
+                        className={cn('flex-1 active:scale-[0.97] active:opacity-70', has && 'opacity-50')}
                         onPress={() => setItem(i)}
                       >
                         <View className="flex-row items-center">
@@ -338,7 +340,7 @@ function PickRow({ p, link = true }: { p: ShopPick; link?: boolean }) {
     <Pressable
       disabled={!link}
       onPress={() => open(p.url)}
-      className="flex-row items-center rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3 active:opacity-70 active:scale-[0.97]"
+      className="flex-row items-center rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3 active:scale-[0.97] active:opacity-70"
     >
       <View className="h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: alpha(C.amber, 0.12) }}>
         <Store size={16} color={C.amber} />
@@ -467,7 +469,7 @@ function SeedCard({ c }: { c: Cultivar }) {
 }
 
 function FromStrain({ onUseKit }: { onUseKit: () => void }) {
-  const { setKit } = useStore();
+  const { kit, setKit } = useStore();
   const [id, setId] = useState(CULTIVARS[0].id);
   const [budget, setBudget] = useState<Budget>('medio');
   const c = CULTIVARS.find((x) => x.id === id)!;
@@ -486,7 +488,8 @@ function FromStrain({ onUseKit }: { onUseKit: () => void }) {
                 tap();
                 setId(x.id);
               }}
-              className={cn('active:opacity-70 active:scale-[0.97]', 
+              className={cn(
+                'active:scale-[0.97] active:opacity-70',
                 'w-[128px] rounded-2xl border p-3',
                 active ? 'border-[#34D88A]/50 bg-[#34D88A]/[0.12]' : 'border-white/[0.08] bg-white/[0.03]',
               )}
@@ -525,7 +528,7 @@ function FromStrain({ onUseKit }: { onUseKit: () => void }) {
               ['Kit', fmtEur(best.kitCost)],
               ['Semi', fmtEur(Math.round(best.seedCost * 100) / 100)],
               ['Luce/ciclo', fmtEur(best.energyCost)],
-              ['Resa', `${best.yieldG[0]}–${best.yieldG[1]} g`],
+              ['Resa', yieldLevel(c).label],
             ].map(([k, v], i) => (
               <View key={k} className={cn('flex-1', i > 0 && 'border-l border-white/[0.06] pl-2.5')}>
                 <T className="text-2xs text-[#8A9A93]">{k}</T>
@@ -537,7 +540,7 @@ function FromStrain({ onUseKit }: { onUseKit: () => void }) {
             className="mt-4"
             label="Usa questo kit"
             onPress={() => {
-              setKit(best.config);
+              setKit({ ...kit, ...best.config, cultivarId: c.id, ledW: undefined });
               onUseKit();
             }}
           />
@@ -557,7 +560,7 @@ function FromStrain({ onUseKit }: { onUseKit: () => void }) {
       <View className="mx-5 gap-2">
         {options.map((o, i) => (
           <Enter i={3 + i} key={o.space}>
-            <OptionRow o={o} onUse={() => (setKit(o.config), onUseKit())} />
+            <OptionRow o={o} onUse={() => (setKit({ ...kit, ...o.config, cultivarId: c.id, ledW: undefined }), onUseKit())} />
           </Enter>
         ))}
       </View>
@@ -576,7 +579,7 @@ function OptionRow({ o, onUse }: { o: SpaceOption; onUse: () => void }) {
       : { c: C.rose, t: 'Troppo bassa' };
   const outdoor = o.energyCost === 0 && o.heightRoom === 999;
   return (
-    <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={onUse}>
+    <Pressable className="active:scale-[0.97] active:opacity-70" onPress={onUse}>
       <View
         className="rounded-2xl p-3.5"
         style={{
@@ -595,8 +598,7 @@ function OptionRow({ o, onUse }: { o: SpaceOption; onUse: () => void }) {
           {[
             ['Piante', `${o.plants}`],
             ['Spesa', fmtEur(Math.round(o.kitCost + o.seedCost + o.energyCost))],
-            ['Resa', `${o.yieldG[0]}–${o.yieldG[1]} g`],
-            ['€/g', fmtNum(o.costPerGram, 2)],
+            ['Luce/ciclo', o.energyCost ? fmtEur(o.energyCost) : '—'],
           ].map(([k, v]) => (
             <View key={k} className="flex-1">
               <T className="text-2xs text-[#56655F]">{k}</T>
@@ -811,7 +813,7 @@ function FitCard({ f, rank }: { f: StrainFit; rank: number }) {
       <View className="mt-3 flex-row border-t border-white/[0.06] pt-3">
         {[
           ['Piante', `${f.plants}`],
-          ['Resa stimata', `${f.yieldG[0]}–${f.yieldG[1]} g`],
+          ['Resa', yieldLevel(f.cultivar).label],
           ['Semi', f.seedCost !== null ? fmtEur(Math.round(f.seedCost * 100) / 100) : 'n/d'],
         ].map(([k, v]) => (
           <View key={k} className="flex-1">
@@ -821,7 +823,11 @@ function FitCard({ f, rank }: { f: StrainFit; rank: number }) {
         ))}
       </View>
       {seed && (
-        <Pressable disabled={!SEED_LINKS} onPress={() => open(seed.url)} className="mt-2 flex-row items-center active:opacity-70 active:scale-[0.97]">
+        <Pressable
+          disabled={!SEED_LINKS}
+          onPress={() => open(seed.url)}
+          className="mt-2 flex-row items-center active:scale-[0.97] active:opacity-70"
+        >
           <Store size={12} color="#8A9A93" />
           <T className="ml-1.5 flex-1 text-2xs text-[#8A9A93]" numberOfLines={1}>
             {seed.name} · {seed.seeds} {seed.seeds > 1 ? 'semi' : 'seme'} {fmtEur(seed.price)} su {seed.shop}
