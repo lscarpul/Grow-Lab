@@ -2,7 +2,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Keyboard, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { alpha } from '../theme/tokens';
@@ -21,6 +21,16 @@ export function Drawer({ open, onClose, accent = '#34D88A', header, children }: 
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const sheetH = Math.min(height * 0.9, height - insets.top - 24);
+  // Modals on Android are not resized by the keyboard: lift the sheet above it so inputs stay visible.
+  const [kb, setKb] = useState(0);
+  useEffect(() => {
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => setKb(e.endCoordinates.height));
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKb(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
   const y = useSharedValue(sheetH);
   const fade = useSharedValue(0);
   const [mounted, setMounted] = useState(open);
@@ -63,7 +73,7 @@ export function Drawer({ open, onClose, accent = '#34D88A', header, children }: 
   if (!mounted) return null;
 
   return (
-    <Modal transparent visible animationType="none" onRequestClose={onClose} statusBarTranslucent>
+    <Modal transparent visible animationType="none" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
       <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
         {Platform.OS !== 'android' && <BlurView intensity={18} tint="dark" style={StyleSheet.absoluteFill} />}
         <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(2,5,6,0.62)' }]} onPress={onClose} />
@@ -74,8 +84,8 @@ export function Drawer({ open, onClose, accent = '#34D88A', header, children }: 
             position: 'absolute',
             left: 0,
             right: 0,
-            bottom: 0,
-            height: sheetH,
+            bottom: kb,
+            height: kb ? Math.min(sheetH, height - kb - insets.top - 12) : sheetH,
             maxWidth: 560,
             alignSelf: 'center',
             width: '100%',
@@ -113,7 +123,12 @@ export function Drawer({ open, onClose, accent = '#34D88A', header, children }: 
             </Pressable>
           </View>
         </View>
-        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: (kb ? 16 : insets.bottom) + 40 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
           {children}
         </ScrollView>
       </Animated.View>
