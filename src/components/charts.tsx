@@ -12,7 +12,8 @@ export interface Point {
 
 /** Catmull-Rom → cubic Bézier for smooth but faithful lines. */
 function smoothPath(pts: [number, number][]) {
-  if (pts.length < 2) return '';
+  if (pts.length === 0) return '';
+  if (pts.length === 1) return `M${pts[0][0]},${pts[0][1]}`;
   let d = `M${pts[0][0]},${pts[0][1]}`;
   for (let i = 0; i < pts.length - 1; i++) {
     const p0 = pts[i - 1] ?? pts[i];
@@ -64,7 +65,8 @@ export function AreaChart({ data, color, height = 150, unit = '', digits = 1, id
     const y = (v: number) => padTop + (1 - (v - lo) / (hi - lo)) * plotH;
     const pts = data.map((d, i) => [x(i), y(d.value)] as [number, number]);
     const line = smoothPath(pts);
-    const area = `${line} L${pts[pts.length - 1][0]},${padTop + plotH} L${pts[0][0]},${padTop + plotH} Z`;
+    // A single reading has no area; an empty or M-less path crashes react-native-svg on Android.
+    const area = pts.length > 1 ? `${line} L${pts[pts.length - 1][0]},${padTop + plotH} L${pts[0][0]},${padTop + plotH} Z` : '';
     return { x, y, pts, line, area };
   }, [width, data, ideal, plotH]);
 
@@ -145,8 +147,8 @@ export function AreaChart({ data, color, height = 150, unit = '', digits = 1, id
               />
             </G>
           )}
-          <Path d={geo.area} fill={`url(#fill-${id})`} />
-          <Path d={geo.line} stroke={color} strokeWidth={2.2} fill="none" strokeLinecap="round" />
+          {!!geo.area && <Path d={geo.area} fill={`url(#fill-${id})`} />}
+          {geo.pts.length > 1 && <Path d={geo.line} stroke={color} strokeWidth={2.2} fill="none" strokeLinecap="round" />}
           {!a && (
             <G>
               <Circle cx={geo.pts[geo.pts.length - 1][0]} cy={geo.pts[geo.pts.length - 1][1]} r={7} fill={alpha(color, 0.2)} />
