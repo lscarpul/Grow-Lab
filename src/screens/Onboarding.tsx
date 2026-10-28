@@ -422,8 +422,8 @@ function SpaceStep({ draft, update }: { draft: KitConfig; update: (p: Partial<Ki
           return (
             <ToggleRow
               key={o.id}
-              label={`${o.label}${price ? ` · +${fmtEur(price)}` : ''}`}
-              caption={o.caption}
+              label={`${o.label}${price ? ` · ${fmtEur(price)}` : ''}`}
+              caption={`${o.caption} ${isOn(draft, o.id) ? 'Già compreso nel totale.' : 'Escluso dal totale.'}`}
               value={isOn(draft, o.id)}
               onChange={(v) => update(withOption(draft, o.id, v))}
             />
