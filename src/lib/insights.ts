@@ -24,7 +24,7 @@ export interface Task {
   priority: 'alta' | 'media' | 'bassa';
 }
 
-export const latest = (p: Plant) => p.readings[p.readings.length - 1];
+export const latest = (p: Plant): DayReading | undefined => p.readings[p.readings.length - 1];
 
 export function series(p: Plant, key: MetricKey | 'height' | 'water', days = 14) {
   return p.readings
@@ -68,6 +68,7 @@ export function plantAlerts(p: Plant): Alert[] {
   const r = latest(p);
   const ranges = STAGE_RANGES[p.stage];
   const out: Alert[] = [];
+  if (!r || daysBetween(r.date, new Date()) > 3) return out;
   (['temp', 'rh', 'vpd', 'ph', 'ec'] as MetricKey[]).forEach((key) => {
     const value = r[key];
     const range = ranges[key];
@@ -214,4 +215,15 @@ export function envScore(p: Plant) {
     });
   });
   return total ? Math.round((hit / total) * 100) : 100;
+}
+
+/** Estimated harvest date from the current stage and the cultivar's typical durations. */
+export function estimateHarvest(stage: StageId, stageStart: Date, cultivarId: string): Date | null {
+  if (['raccolta', 'essiccazione', 'concia'].includes(stage)) return null;
+  const cultivar = cultivarById(cultivarId);
+  const mid = (r: [number, number]) => (r[0] + r[1]) / 2;
+  const order: StageId[] = ['germinazione', 'piantina', 'vegetativa', 'fioritura'];
+  let days = 0;
+  for (let i = order.indexOf(stage); i < order.length; i++) days += mid(stageLength(order[i], cultivar));
+  return new Date(stageStart.getTime() + Math.round(days) * 86_400_000);
 }

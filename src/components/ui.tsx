@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
-import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react-native';
+import { ArrowDownRight, ArrowUpRight, Minus, Plus } from 'lucide-react-native';
 import { ReactNode, useEffect, useState } from 'react';
 import { LayoutChangeEvent, Platform, Pressable, ScrollView, StyleSheet, Text, TextProps, View, ViewProps } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
@@ -311,5 +311,95 @@ export function Progress({
     <View style={{ height, borderRadius: height, backgroundColor: track, overflow: 'hidden' }}>
       <View style={{ width: `${Math.max(2, Math.min(100, value * 100))}%`, height, borderRadius: height, backgroundColor: color }} />
     </View>
+  );
+}
+
+/** Compact numeric stepper: tap −/+ or hold for repeated steps. */
+export function Stepper({
+  label,
+  value,
+  onChange,
+  step = 1,
+  min = -Infinity,
+  max = Infinity,
+  digits = 0,
+  unit,
+  color = C.leaf,
+  className,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  step?: number;
+  min?: number;
+  max?: number;
+  digits?: number;
+  unit?: string;
+  color?: string;
+  className?: string;
+}) {
+  const set = (v: number) => {
+    tap();
+    onChange(Math.min(max, Math.max(min, Math.round(v / step) * step)));
+  };
+  const btn = 'h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05]';
+  return (
+    <View className={cn('rounded-2xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5', className)}>
+      <T className="text-2xs text-[#8A9A93]">{label}</T>
+      <View className="mt-1.5 flex-row items-center justify-between">
+        <Pressable accessibilityLabel={`Diminuisci ${label}`} onPress={() => set(value - step)} hitSlop={6} className={btn}>
+          <Minus size={14} color="#C9D4CF" />
+        </Pressable>
+        <T className="mx-1 font-grotesk-b text-[17px]" style={{ color }}>
+          {value.toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}
+          {unit && <T className="font-inter text-2xs text-[#8A9A93]"> {unit}</T>}
+        </T>
+        <Pressable accessibilityLabel={`Aumenta ${label}`} onPress={() => set(value + step)} hitSlop={6} className={btn}>
+          <Plus size={14} color="#C9D4CF" />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+/** Pill-shaped primary/secondary button. */
+export function Button({
+  label,
+  onPress,
+  icon,
+  tone = 'primary',
+  color = C.leaf,
+  className,
+  disabled,
+}: {
+  label: string;
+  onPress: () => void;
+  icon?: ReactNode;
+  tone?: 'primary' | 'ghost';
+  color?: string;
+  className?: string;
+  disabled?: boolean;
+}) {
+  const primary = tone === 'primary';
+  return (
+    <Pressable
+      disabled={disabled}
+      accessibilityRole="button"
+      onPress={() => {
+        tap();
+        onPress();
+      }}
+      className={cn('flex-row items-center justify-center rounded-2xl px-4 py-3', disabled && 'opacity-40', className)}
+      style={{
+        backgroundColor: primary ? color : alpha(color, 0.1),
+        borderWidth: 1,
+        borderColor: primary ? color : alpha(color, 0.3),
+      }}
+    >
+      {icon}
+      <T className={cn('font-inter-b text-[13px]', icon ? 'ml-2' : '')} style={{ color: primary ? '#05080A' : color }}>
+        {label}
+      </T>
+    </Pressable>
   );
 }

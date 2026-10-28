@@ -22,7 +22,7 @@ export interface DayReading {
   ph: number | null;
   ec: number | null;
   ppfd: number | null;
-  height: number;
+  height: number | null;
   water: number | null; // litres given
 }
 
@@ -46,6 +46,7 @@ export interface Plant {
   readings: DayReading[];
   logs: LogEntry[];
   finalYield?: number; // grams dry
+  demo: boolean;
 }
 
 interface Spec {
@@ -429,6 +430,7 @@ function build(spec: Spec, now: Date): Plant {
     healthTrend: spec.healthTrend,
     readings,
     finalYield: spec.finalYield,
+    demo: true,
     logs: spec.logs.map(([ago, kind, title, detail, metrics], i) => ({
       id: `${spec.id}-log-${i}`,
       date: new Date(addDays(today, -ago).getTime() + (9 + ((i * 7) % 11)) * 3_600_000 + ((i * 17) % 60) * 60_000),
@@ -442,4 +444,99 @@ function build(spec: Spec, now: Date): Plant {
 
 export function buildPlants(now = new Date()): Plant[] {
   return SPECS.map((s) => build(s, now));
+}
+
+export interface UserPlantSpec {
+  id: string;
+  nickname: string;
+  cultivarId: string;
+  env: Environment;
+  medium: Plant['medium'];
+  potL: number | null;
+  space: string;
+  light: string;
+  photoperiod: string;
+  sowDate: string; // ISO
+  timeline: { stage: StageId; start: string }[];
+  createdAt: string;
+}
+
+export interface Measurement {
+  id: string;
+  plantId: string;
+  date: string; // ISO
+  temp: number;
+  rh: number;
+  ph: number | null;
+  ec: number | null;
+  height: number | null;
+}
+
+const stageOn = (timeline: { stage: StageId; start: Date }[], d: Date) => {
+  let s = timeline[0].stage;
+  for (const t of timeline) if (startOfDay(t.start).getTime() <= startOfDay(d).getTime()) s = t.stage;
+  return s;
+};
+
+/** Converts manual measurements into daily readings (last measurement of each day wins). */
+export function readingsFromMeasurements(ms: Measurement[], timeline: { stage: StageId; start: Date }[]): DayReading[] {
+  const byDay = new Map<number, Measurement>();
+  [...ms].sort((a, b) => a.date.localeCompare(b.date)).forEach((m) => byDay.set(startOfDay(new Date(m.date)).getTime(), m));
+  return [...byDay.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([day, m]) => {
+      const date = new Date(day);
+      const stage = stageOn(timeline, date);
+      const living = !['raccolta', 'essiccazione', 'concia'].includes(stage);
+      return {
+        date,
+        stage,
+        temp: m.temp,
+        rh: m.rh,
+        vpd: round(vpd(m.temp, m.rh, living ? -2 : 0), 2),
+        ph: m.ph,
+        ec: m.ec,
+        ppfd: null,
+        height: m.height,
+        water: null,
+      };
+    });
+}
+
+/** Merges manual readings into an existing series, replacing days that already have a reading. */
+export function mergeReadings(base: DayReading[], extra: DayReading[]): DayReading[] {
+  if (!extra.length) return base;
+  const map = new Map(base.map((r) => [startOfDay(r.date).getTime(), r]));
+  extra.forEach((r) => {
+    const key = startOfDay(r.date).getTime();
+    const prev = map.get(key);
+    map.set(key, prev ? { ...prev, ...r, ppfd: prev.ppfd, water: prev.water, height: r.height ?? prev.height } : r);
+  });
+  return [...map.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
+}
+
+export function buildUserPlant(spec: UserPlantSpec, ms: Measurement[], expectedHarvest: Date | null): Plant {
+  const timeline = spec.timeline.map((t) => ({ stage: t.stage, start: new Date(t.start) }));
+  const last = timeline[timeline.length - 1];
+  return {
+    id: spec.id,
+    nickname: spec.nickname,
+    cultivarId: spec.cultivarId,
+    env: spec.env,
+    medium: spec.medium,
+    potL: spec.potL,
+    space: spec.space,
+    light: spec.light,
+    photoperiod: spec.photoperiod,
+    sowDate: new Date(spec.sowDate),
+    timeline,
+    stage: last.stage,
+    stageStart: last.start,
+    expectedHarvest,
+    health: 100,
+    healthTrend: 0,
+    readings: readingsFromMeasurements(ms, timeline),
+    logs: [],
+    demo: false,
+  };
 }

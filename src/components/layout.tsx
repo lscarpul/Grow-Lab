@@ -1,5 +1,5 @@
 import { BlurView } from 'expo-blur';
-import { BookOpen, Dna, House, Sprout, Stethoscope } from 'lucide-react-native';
+import { BookOpen, Dna, House, ScanLine, ShoppingBag, Sprout } from 'lucide-react-native';
 import { ReactNode } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -68,14 +68,15 @@ export function StageBadge({ stage }: { stage: StageId }) {
   );
 }
 
-export type TabId = 'home' | 'piante' | 'genetiche' | 'guida' | 'diagnosi';
+export type TabId = 'home' | 'piante' | 'kit' | 'genetiche' | 'guida' | 'strumenti';
 
 const TABS: { id: TabId; label: string; Icon: typeof House }[] = [
   { id: 'home', label: 'Home', Icon: House },
   { id: 'piante', label: 'Piante', Icon: Sprout },
+  { id: 'kit', label: 'Kit', Icon: ShoppingBag },
   { id: 'genetiche', label: 'Genetiche', Icon: Dna },
   { id: 'guida', label: 'Guida', Icon: BookOpen },
-  { id: 'diagnosi', label: 'Diagnosi', Icon: Stethoscope },
+  { id: 'strumenti', label: 'Strumenti', Icon: ScanLine },
 ];
 
 export function TabBar({ tab, onChange, badges }: { tab: TabId; onChange: (t: TabId) => void; badges?: Partial<Record<TabId, number>> }) {
@@ -112,7 +113,7 @@ export function TabBar({ tab, onChange, badges }: { tab: TabId; onChange: (t: Ta
                 )}
               </View>
               <T
-                className={cn('mt-1 text-[10px]', active ? 'font-inter-sb' : 'font-inter-md')}
+                className={cn('mt-1 text-[9.5px]', active ? 'font-inter-sb' : 'font-inter-md')}
                 style={{ color: active ? '#E6FFF1' : '#7D8C86' }}
               >
                 {label}

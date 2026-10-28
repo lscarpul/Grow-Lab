@@ -4,6 +4,7 @@ import { Pressable, View } from 'react-native';
 import { RangeBar } from '../components/charts';
 import { Drawer } from '../components/Drawer';
 import { Disclaimer, Enter, Screen } from '../components/layout';
+import { OutdoorCalendar } from './OutdoorCalendar';
 import { Badge, Bullet, ChipRow, cn, Divider, Eyebrow, Glass, KeyValue, SectionHeader, Segmented, T } from '../components/ui';
 import { CULTIVARS } from '../data/cultivars';
 import { METRICS, MetricKey, STAGE_DAYS, STAGE_ORDER, STAGE_RANGES, STAGE_SHORT } from '../data/ranges';
@@ -16,7 +17,7 @@ import { alpha, C, METRIC_COLOR, STAGE_COLOR, TYPE_COLOR } from '../theme/tokens
 const DIFF_LEVEL = { Facile: 1, Media: 2, Impegnativa: 3 } as const;
 
 export function GuideScreen() {
-  const [mode, setMode] = useState<'fasi' | 'tipi'>('fasi');
+  const [mode, setMode] = useState<'fasi' | 'tipi' | 'calendario'>('fasi');
   const [metric, setMetric] = useState<MetricKey>('temp');
   const [stage, setStage] = useState<Stage | null>(null);
   const [strain, setStrain] = useState<StrainType | null>(null);
@@ -34,8 +35,9 @@ export function GuideScreen() {
             value={mode}
             onChange={setMode}
             options={[
-              { value: 'fasi', label: 'Fasi del ciclo' },
+              { value: 'fasi', label: 'Fasi' },
               { value: 'tipi', label: 'Tipologie' },
+              { value: 'calendario', label: 'Calendario' },
             ]}
           />
         </Enter>
@@ -171,7 +173,7 @@ export function GuideScreen() {
               ))}
             </View>
           </>
-        ) : (
+        ) : mode === 'tipi' ? (
           <>
             <SectionHeader title="Tipologie di cannabis" caption="Caratteristiche, tempi e regole di coltivazione" />
             <View className="mx-5 flex-row flex-wrap justify-between gap-y-3">
@@ -221,6 +223,8 @@ export function GuideScreen() {
               })}
             </View>
           </>
+        ) : (
+          <OutdoorCalendar />
         )}
         <Disclaimer />
       </Screen>

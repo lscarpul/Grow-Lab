@@ -1,17 +1,29 @@
-import { Beaker, Droplets, Eye, FlaskConical, Scissors, ShieldCheck, Sprout, TriangleAlert } from 'lucide-react-native';
+import {
+  Beaker,
+  ChevronsRight,
+  ClipboardPlus,
+  Droplets,
+  Eye,
+  FlaskConical,
+  Scissors,
+  ShieldCheck,
+  Sprout,
+  Trash2,
+  TriangleAlert,
+} from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { AreaChart, MiniBars, RangeBar, Ring } from '../components/charts';
 import { Drawer } from '../components/Drawer';
 import { StageBadge } from '../components/layout';
-import { Badge, Bullet, Divider, Eyebrow, Glass, T, tap, TrendPill } from '../components/ui';
+import { Badge, Bullet, Button, cn, Divider, Eyebrow, Glass, Stepper, T, tap, TrendPill } from '../components/ui';
 import { cultivarById } from '../data/cultivars';
-import { LogKind, Plant } from '../data/grows';
-import { METRICS, MetricKey, rangeStatus, STAGE_RANGES } from '../data/ranges';
+import { DayReading, LogKind, Plant } from '../data/grows';
+import { METRICS, MetricKey, rangeStatus, STAGE_ORDER, STAGE_RANGES } from '../data/ranges';
 import { stageById } from '../data/stages';
 import { cycleProgress, envScore, latest, metricTrend, plantAlerts, plantTasks, series, stageProgress } from '../lib/insights';
 import { daysBetween, fmtDate, fmtNum, fmtTime, relativeDay } from '../lib/math';
-import { useStore } from '../state/store';
+import { NewMeasurement, useStore } from '../state/store';
 import { alpha, C, METRIC_COLOR, STAGE_COLOR } from '../theme/tokens';
 
 export const LOG_META: Record<LogKind, { label: string; color: string; Icon: typeof Droplets }> = {
@@ -32,8 +44,10 @@ const QUICK: { kind: LogKind; title: string; detail: string }[] = [
 ];
 
 export function PlantDrawer({ plant, onClose }: { plant: Plant | null; onClose: () => void }) {
-  const { addLog } = useStore();
+  const { addLog, addMeasurement, advanceStage, deletePlant } = useStore();
   const [metric, setMetric] = useState<MetricKey>('temp');
+  const [measuring, setMeasuring] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const p = plant;
   const data = useMemo(() => (p ? derive(p) : null), [p]);
   if (!p || !data)
@@ -46,16 +60,22 @@ export function PlantDrawer({ plant, onClose }: { plant: Plant | null; onClose: 
   const color = STAGE_COLOR[p.stage];
   const ranges = STAGE_RANGES[p.stage];
   const available = (['temp', 'rh', 'vpd', 'ph', 'ec', 'ppfd'] as MetricKey[]).filter(
-    (k) => last[k] !== null && series(p, k, 14).length > 1,
+    (k) => !!last && last[k] !== null && series(p, k, 14).length > 1,
   );
   const m = available.includes(metric) ? metric : available[0];
   const chartData = series(p, m, 21);
   const total = daysBetween(p.sowDate, p.expectedHarvest ?? new Date()) || 1;
+  const nextStage = STAGE_ORDER[STAGE_ORDER.indexOf(p.stage) + 1];
+  const close = () => {
+    setMeasuring(false);
+    setConfirmDelete(false);
+    onClose();
+  };
 
   return (
     <Drawer
       open={!!plant}
-      onClose={onClose}
+      onClose={close}
       accent={color}
       header={
         <View>
@@ -154,8 +174,42 @@ export function PlantDrawer({ plant, onClose }: { plant: Plant | null; onClose: 
         </View>
       )}
 
+      {/* Measurements */}
+      {measuring ? (
+        <MeasureForm
+          plant={p}
+          last={last}
+          onCancel={() => setMeasuring(false)}
+          onSave={(v) => {
+            addMeasurement(p.id, v);
+            setMeasuring(false);
+          }}
+        />
+      ) : !last ? (
+        <Glass className="mx-5 mt-4 items-center p-5" glow={C.sky}>
+          <View className="h-11 w-11 items-center justify-center rounded-2xl" style={{ backgroundColor: alpha(C.sky, 0.14) }}>
+            <ClipboardPlus size={20} color={C.sky} />
+          </View>
+          <T className="mt-3 font-grotesk text-[17px]">Nessuna misura ancora</T>
+          <T className="mt-1 text-center text-xs leading-[17px] text-[#8A9A93]">
+            Inserisci temperatura, umidità, pH ed EC: l'app calcola il VPD, confronta i valori con i range ideali della fase e ti avvisa se
+            qualcosa non va.
+          </T>
+          <Button className="mt-4 self-stretch" label="Registra le prime misure" onPress={() => setMeasuring(true)} color={C.sky} />
+        </Glass>
+      ) : (
+        <Button
+          className="mx-5 mt-4"
+          tone="ghost"
+          color={C.sky}
+          label="Registra nuove misure"
+          icon={<ClipboardPlus size={15} color={C.sky} />}
+          onPress={() => setMeasuring(true)}
+        />
+      )}
+
       {/* Chart */}
-      {m && (
+      {m && last && (
         <Glass className="mx-5 mt-4 px-4 pb-3 pt-4">
           <View className="flex-row items-start justify-between">
             <View>
@@ -214,64 +268,68 @@ export function PlantDrawer({ plant, onClose }: { plant: Plant | null; onClose: 
         </Glass>
       )}
 
-      {/* Range check */}
-      <Glass className="mx-5 mt-4 p-4">
-        <Eyebrow>Valori attuali vs ideale · {stageById(p.stage)?.name}</Eyebrow>
-        <View className="mt-3 gap-3.5">
-          {(['temp', 'rh', 'vpd', 'ph', 'ec', 'ppfd'] as MetricKey[])
-            .filter((k) => ranges[k] && last[k] !== null)
-            .map((k) => {
-              const v = last[k] as number;
-              const st = rangeStatus(v, ranges[k]);
-              const c = st === 'ok' ? C.leaf : st === 'warn' ? C.amber : C.rose;
-              return (
-                <View key={k}>
-                  <View className="mb-1 flex-row justify-between">
-                    <T className="text-xs text-[#A9B6B0]">{METRICS[k].label}</T>
-                    <T className="font-inter-sb text-xs" style={{ color: c }}>
-                      {fmtNum(v, METRICS[k].digits)} {METRICS[k].unit}
-                      <T className="text-2xs text-[#56655F]">
-                        {'  '}
-                        ideale {fmtNum(ranges[k]![0], METRICS[k].digits)}–{fmtNum(ranges[k]![1], METRICS[k].digits)}
-                      </T>
-                    </T>
-                  </View>
-                  <RangeBar scale={METRICS[k].scale} ideal={ranges[k]} value={v} color={METRIC_COLOR[k]} />
-                </View>
-              );
-            })}
-        </View>
-      </Glass>
+      {last && (
+        <>
+          {/* Range check */}
+          <Glass className="mx-5 mt-4 p-4">
+            <Eyebrow>Valori attuali vs ideale · {stageById(p.stage)?.name}</Eyebrow>
+            <View className="mt-3 gap-3.5">
+              {(['temp', 'rh', 'vpd', 'ph', 'ec', 'ppfd'] as MetricKey[])
+                .filter((k) => ranges[k] && last[k] !== null)
+                .map((k) => {
+                  const v = last[k] as number;
+                  const st = rangeStatus(v, ranges[k]);
+                  const c = st === 'ok' ? C.leaf : st === 'warn' ? C.amber : C.rose;
+                  return (
+                    <View key={k}>
+                      <View className="mb-1 flex-row justify-between">
+                        <T className="text-xs text-[#A9B6B0]">{METRICS[k].label}</T>
+                        <T className="font-inter-sb text-xs" style={{ color: c }}>
+                          {fmtNum(v, METRICS[k].digits)} {METRICS[k].unit}
+                          <T className="text-2xs text-[#56655F]">
+                            {'  '}
+                            ideale {fmtNum(ranges[k]![0], METRICS[k].digits)}–{fmtNum(ranges[k]![1], METRICS[k].digits)}
+                          </T>
+                        </T>
+                      </View>
+                      <RangeBar scale={METRICS[k].scale} ideal={ranges[k]} value={v} color={METRIC_COLOR[k]} />
+                    </View>
+                  );
+                })}
+            </View>
+          </Glass>
 
-      {/* Water + growth */}
-      <View className="mx-5 mt-4 flex-row gap-3">
-        <Glass className="flex-1 p-4">
-          <Eyebrow>Acqua · 14 gg</Eyebrow>
-          <T className="mt-1 font-grotesk-b text-xl">
-            {fmtNum(
-              p.readings.slice(-14).reduce((a, r) => a + (r.water ?? 0), 0),
-              1,
-            )}
-            <T className="font-inter text-xs text-[#8A9A93]"> L</T>
-          </T>
-          <View className="mt-3">
-            <MiniBars data={p.readings.slice(-14).map((r) => r.water)} color={C.sky} height={46} />
+          {/* Water + growth */}
+          <View className="mx-5 mt-4 flex-row gap-3">
+            <Glass className="flex-1 p-4">
+              <Eyebrow>Acqua · 14 gg</Eyebrow>
+              <T className="mt-1 font-grotesk-b text-xl">
+                {fmtNum(
+                  p.readings.slice(-14).reduce((a, r) => a + (r.water ?? 0), 0),
+                  1,
+                )}
+                <T className="font-inter text-xs text-[#8A9A93]"> L</T>
+              </T>
+              <View className="mt-3">
+                <MiniBars data={p.readings.slice(-14).map((r) => r.water)} color={C.sky} height={46} />
+              </View>
+            </Glass>
+            <Glass className="flex-1 p-4">
+              <Eyebrow>Altezza</Eyebrow>
+              <T className="mt-1 font-grotesk-b text-xl">
+                {last.height ?? '—'}
+                <T className="font-inter text-xs text-[#8A9A93]"> cm</T>
+              </T>
+              <View className="mt-1">
+                <TrendPill value={metricHeightDelta(p)} suffix=" cm" label="in 7 gg" />
+              </View>
+              <View className="mt-2">
+                <MiniBars data={p.readings.slice(-14).map((r) => r.height)} color={C.leaf} height={30} />
+              </View>
+            </Glass>
           </View>
-        </Glass>
-        <Glass className="flex-1 p-4">
-          <Eyebrow>Altezza</Eyebrow>
-          <T className="mt-1 font-grotesk-b text-xl">
-            {last.height}
-            <T className="font-inter text-xs text-[#8A9A93]"> cm</T>
-          </T>
-          <View className="mt-1">
-            <TrendPill value={metricHeightDelta(p)} suffix=" cm" label="in 7 gg" />
-          </View>
-          <View className="mt-2">
-            <MiniBars data={p.readings.slice(-14).map((r) => r.height)} color={C.leaf} height={30} />
-          </View>
-        </Glass>
-      </View>
+        </>
+      )}
 
       {/* Tasks */}
       <View className="mx-5 mt-6">
@@ -373,6 +431,43 @@ export function PlantDrawer({ plant, onClose }: { plant: Plant | null; onClose: 
         </View>
       </View>
 
+      {/* Plant management */}
+      {!p.demo && (
+        <View className="mx-5 mb-5 gap-2">
+          {nextStage && (
+            <Button
+              tone="ghost"
+              color={STAGE_COLOR[nextStage]}
+              icon={<ChevronsRight size={16} color={STAGE_COLOR[nextStage]} />}
+              label={`Passa a ${stageById(nextStage)?.name}`}
+              onPress={() => advanceStage(p.id, nextStage)}
+            />
+          )}
+          {confirmDelete ? (
+            <View className="flex-row gap-2">
+              <Button className="flex-1" tone="ghost" color="#9AA9A2" label="Annulla" onPress={() => setConfirmDelete(false)} />
+              <Button
+                className="flex-1"
+                color={C.rose}
+                label="Elimina davvero"
+                onPress={() => {
+                  deletePlant(p.id);
+                  close();
+                }}
+              />
+            </View>
+          ) : (
+            <Button
+              tone="ghost"
+              color={C.rose}
+              icon={<Trash2 size={15} color={C.rose} />}
+              label="Elimina pianta"
+              onPress={() => setConfirmDelete(true)}
+            />
+          )}
+        </View>
+      )}
+
       <Divider className="mx-5 mt-2" />
       <View className="mx-5 mt-4 flex-row flex-wrap gap-x-6 gap-y-2">
         {[
@@ -389,16 +484,140 @@ export function PlantDrawer({ plant, onClose }: { plant: Plant | null; onClose: 
       </View>
       <View className="mx-5 mt-4 flex-row items-center">
         <Beaker size={12} color="#56655F" />
-        <T className="ml-1.5 text-2xs text-[#56655F]">Dati sensori dimostrativi generati per l'anteprima.</T>
+        <T className="ml-1.5 text-2xs text-[#56655F]">
+          {p.demo
+            ? "Pianta d'esempio: i dati dei sensori sono simulati."
+            : "Dati inseriti da te. Il VPD è stimato con la foglia 2 °C più fresca dell'aria."}
+        </T>
       </View>
     </Drawer>
   );
 }
 
 function metricHeightDelta(p: Plant) {
-  const h = p.readings.map((r) => r.height);
-  if (h.length < 8) return 0;
-  return h[h.length - 1] - h[h.length - 8];
+  const recent = p.readings.filter((r) => r.height !== null && daysBetween(r.date, new Date()) <= 7);
+  if (recent.length < 2) return 0;
+  return (recent[recent.length - 1].height as number) - (recent[0].height as number);
+}
+
+type Optional = 'ph' | 'ec' | 'height';
+
+/** Inline form for manual readings, prefilled from the last reading or the stage's ideal range. */
+function MeasureForm({
+  plant,
+  last,
+  onSave,
+  onCancel,
+}: {
+  plant: Plant;
+  last: DayReading | undefined;
+  onSave: (m: NewMeasurement) => void;
+  onCancel: () => void;
+}) {
+  const r = STAGE_RANGES[plant.stage];
+  const mid = (k: MetricKey, fallback: number) => (r[k] ? (r[k]![0] + r[k]![1]) / 2 : fallback);
+  const [temp, setTemp] = useState(last?.temp ?? Math.round(mid('temp', 24)));
+  const [rh, setRh] = useState(last?.rh ?? Math.round(mid('rh', 55)));
+  const [ph, setPh] = useState(last?.ph ?? Math.round(mid('ph', 6.2) * 10) / 10);
+  const [ec, setEc] = useState(last?.ec ?? Math.round(mid('ec', 1.2) * 10) / 10);
+  const [height, setHeight] = useState(last?.height ?? 10);
+  const [include, setInclude] = useState<Optional[]>(['ph', 'ec', 'height']);
+  const on = (k: Optional) => include.includes(k);
+  const toggle = (k: Optional) => setInclude((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
+  const leafVpd = (() => {
+    const es = (t: number) => 0.6108 * Math.exp((17.27 * t) / (t + 237.3));
+    return Math.max(0, es(temp - 2) - es(temp) * (rh / 100));
+  })();
+  const vr = r.vpd;
+  const vpdColor = !vr ? '#ECF3EF' : leafVpd >= vr[0] && leafVpd <= vr[1] ? C.leaf : C.amber;
+  return (
+    <Glass className="mx-5 mt-4 p-4" glow={C.sky}>
+      <View className="flex-row items-center justify-between">
+        <Eyebrow>Nuove misure · oggi</Eyebrow>
+        <T className="text-2xs text-[#8A9A93]">
+          VPD stimato{' '}
+          <T className="font-grotesk-b text-xs" style={{ color: vpdColor }}>
+            {fmtNum(leafVpd, 2)} kPa
+          </T>
+        </T>
+      </View>
+      <View className="mt-3 flex-row gap-2">
+        <Stepper
+          className="flex-1"
+          label="Temperatura"
+          value={temp}
+          onChange={setTemp}
+          step={0.5}
+          min={5}
+          max={40}
+          digits={1}
+          unit="°C"
+          color={METRIC_COLOR.temp}
+        />
+        <Stepper className="flex-1" label="Umidità" value={rh} onChange={setRh} min={15} max={99} unit="%" color={METRIC_COLOR.rh} />
+      </View>
+      <View className="mt-3 flex-row flex-wrap gap-1.5">
+        {(['ph', 'ec', 'height'] as Optional[]).map((k) => (
+          <Pressable
+            key={k}
+            onPress={() => {
+              tap();
+              toggle(k);
+            }}
+            className={cn(
+              'rounded-full border px-3 py-1.5',
+              on(k) ? 'border-[#38BDF8]/50 bg-[#38BDF8]/15' : 'border-white/10 bg-white/[0.03]',
+            )}
+          >
+            <T className="font-inter-sb text-2xs" style={{ color: on(k) ? C.sky : '#8A9A93' }}>
+              {on(k) ? '✓ ' : '+ '}
+              {k === 'height' ? 'Altezza' : METRICS[k].short}
+            </T>
+          </Pressable>
+        ))}
+      </View>
+      {(on('ph') || on('ec') || on('height')) && (
+        <View className="mt-3 flex-row gap-2">
+          {on('ph') && (
+            <Stepper
+              className="flex-1"
+              label="pH"
+              value={ph}
+              onChange={setPh}
+              step={0.1}
+              min={4}
+              max={8.5}
+              digits={1}
+              color={METRIC_COLOR.ph}
+            />
+          )}
+          {on('ec') && (
+            <Stepper
+              className="flex-1"
+              label="EC mS/cm"
+              value={ec}
+              onChange={setEc}
+              step={0.1}
+              min={0}
+              max={4}
+              digits={1}
+              color={METRIC_COLOR.ec}
+            />
+          )}
+          {on('height') && <Stepper className="flex-1" label="Altezza cm" value={height} onChange={setHeight} step={1} min={1} max={400} />}
+        </View>
+      )}
+      <View className="mt-4 flex-row gap-2">
+        <Button className="flex-1" tone="ghost" color="#9AA9A2" label="Annulla" onPress={onCancel} />
+        <Button
+          className="flex-[2]"
+          color={C.sky}
+          label="Salva misure"
+          onPress={() => onSave({ temp, rh, ph: on('ph') ? ph : null, ec: on('ec') ? ec : null, height: on('height') ? height : null })}
+        />
+      </View>
+    </Glass>
+  );
 }
 
 function derive(p: Plant) {

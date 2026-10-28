@@ -23,6 +23,15 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "backgroundColor": "#05080A"
+    "backgroundColor": "#05080A",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Grow Lab usa le tue foto per analizzare i problemi delle piante.",
+          "cameraPermission": "Grow Lab usa la fotocamera per fotografare le piante e riconoscere i problemi."
+        }
+      ]
+    ]
   }
 }

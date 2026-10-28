@@ -4,7 +4,7 @@ import { Pressable, TextInput, View } from 'react-native';
 import Svg, { Ellipse, Line, Path, Rect } from 'react-native-svg';
 import { Ring, StackBar } from '../components/charts';
 import { Drawer } from '../components/Drawer';
-import { Disclaimer, Enter, Screen } from '../components/layout';
+import { Enter } from '../components/layout';
 import { Badge, Bullet, ChipRow, cn, Eyebrow, Glass, T, tap } from '../components/ui';
 import { PROBLEM_CATEGORIES, PROBLEMS } from '../data/problems';
 import { Problem, ProblemCategory } from '../data/types';
@@ -21,7 +21,7 @@ const ZONES: { id: Zone; label: string }[] = [
   { id: 'tutta', label: 'Tutta la pianta' },
 ];
 
-const CAT_COLOR: Record<ProblemCategory, string> = {
+export const CAT_COLOR: Record<ProblemCategory, string> = {
   Carenze: C.amber,
   'Eccessi e stress': C.sky,
   Parassiti: C.rose,
@@ -40,7 +40,8 @@ export function zoneOf(p: Problem): Zone {
   return 'foglie';
 }
 
-export function DiagnoseScreen() {
+/** Symptom finder: search, plant zone map and category filters over the problem catalog. Rendered inside the Tools screen. */
+export function SymptomFinder() {
   const [q, setQ] = useState('');
   const [cats, setCats] = useState<ProblemCategory[]>([]);
   const [zone, setZone] = useState<Zone | null>(null);
@@ -55,120 +56,113 @@ export function DiagnoseScreen() {
 
   return (
     <>
-      <Screen
-        eyebrow="Diagnosi"
-        title="Cosa ha la pianta?"
-        subtitle="Scegli dove vedi il problema o descrivi il sintomo: ti mostriamo cause e soluzioni."
-      >
-        <Enter i={1} className="mx-5 mt-5">
-          <View className="flex-row items-center rounded-2xl border border-white/10 bg-white/[0.05] px-3.5">
-            <Search size={16} color="#8A9A93" />
-            <TextInput
-              value={q}
-              onChangeText={setQ}
-              placeholder="Es. punte bruciate, macchie, ragnatele…"
-              placeholderTextColor="#56655F"
-              className="ml-2.5 flex-1 py-3 font-inter text-[14px] text-[#ECF3EF]"
-              style={{ outlineStyle: 'none' } as object}
-            />
-          </View>
-        </Enter>
-
-        {/* Zone map */}
-        <Enter i={2} className="mx-5 mt-3">
-          <Glass className="flex-row p-4">
-            <View>
-              <PlantMap zone={zone} />
-            </View>
-            <View className="ml-4 flex-1 justify-center gap-1.5">
-              <Eyebrow className="mb-1">Dove vedi il sintomo?</Eyebrow>
-              {ZONES.map((z) => {
-                const n = PROBLEMS.filter((p) => zoneOf(p) === z.id).length;
-                const active = zone === z.id;
-                return (
-                  <Pressable
-                    key={z.id}
-                    onPress={() => {
-                      tap();
-                      setZone(active ? null : z.id);
-                    }}
-                    className={cn(
-                      'flex-row items-center justify-between rounded-xl px-3 py-2',
-                      active ? 'bg-[#34D88A]/15' : 'bg-white/[0.03]',
-                    )}
-                    style={{ borderWidth: 1, borderColor: active ? alpha(C.leaf, 0.45) : 'rgba(255,255,255,0.05)' }}
-                  >
-                    <T className={cn('flex-1 text-xs', active ? 'font-inter-sb' : 'text-[#A9B6B0]')} numberOfLines={1}>
-                      {z.label}
-                    </T>
-                    <T className="ml-2 font-grotesk-md text-2xs" style={{ color: active ? C.leaf : '#56655F' }}>
-                      {n}
-                    </T>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </Glass>
-        </Enter>
-
-        <Enter i={3} className="mt-3">
-          <ChipRow
-            options={PROBLEM_CATEGORIES.map((c) => ({
-              value: c,
-              label: c,
-              color: CAT_COLOR[c],
-              count: PROBLEMS.filter((p) => p.category === c).length,
-            }))}
-            selected={cats}
-            onToggle={(v) => setCats((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]))}
+      <Enter i={1} className="mx-5 mt-5">
+        <View className="flex-row items-center rounded-2xl border border-white/10 bg-white/[0.05] px-3.5">
+          <Search size={16} color="#8A9A93" />
+          <TextInput
+            value={q}
+            onChangeText={setQ}
+            placeholder="Es. punte bruciate, macchie, ragnatele…"
+            placeholderTextColor="#56655F"
+            className="ml-2.5 flex-1 py-3 font-inter text-[14px] text-[#ECF3EF]"
+            style={{ outlineStyle: 'none' } as object}
           />
-        </Enter>
-
-        <Enter i={4} className="mx-5 mt-4">
-          <StackBar
-            parts={PROBLEM_CATEGORIES.map((c) => ({ value: list.filter((p) => p.category === c).length, color: CAT_COLOR[c] }))}
-            height={6}
-          />
-          <T className="mt-2 text-2xs text-[#56655F]">
-            {list.length} problemi su {PROBLEMS.length}
-            {zone ? ` · zona: ${ZONES.find((z) => z.id === zone)?.label.toLowerCase()}` : ''}
-          </T>
-        </Enter>
-
-        <View className="mx-5 mt-3 gap-2.5">
-          {list.map((p, i) => {
-            const color = CAT_COLOR[p.category];
-            return (
-              <Enter i={5 + Math.min(i, 8)} key={p.id}>
-                <Pressable onPress={() => setOpen(p)}>
-                  <Glass className="flex-row p-4">
-                    <View className="mr-3.5 w-1 rounded-full" style={{ backgroundColor: color }} />
-                    <View className="flex-1">
-                      <View className="flex-row items-center justify-between">
-                        <Badge color={color}>{p.category}</Badge>
-                        {URGENT.has(p.id) && (
-                          <Badge tone="rose" dot>
-                            Intervieni subito
-                          </Badge>
-                        )}
-                      </View>
-                      <T className="mt-2 font-grotesk-b text-[16px]">{p.name}</T>
-                      <T className="mt-0.5 text-2xs text-[#8A9A93]">{p.where}</T>
-                      <T className="mt-1.5 text-xs leading-[17px] text-[#B7C3BE]" numberOfLines={2}>
-                        {p.symptoms[0]}
-                      </T>
-                    </View>
-                  </Glass>
-                </Pressable>
-              </Enter>
-            );
-          })}
-          {list.length === 0 && (
-            <T className="mt-8 text-center text-sm text-[#8A9A93]">Nessun problema corrisponde. Prova a togliere un filtro.</T>
-          )}
         </View>
-        <Disclaimer />
-      </Screen>
+      </Enter>
+
+      {/* Zone map */}
+      <Enter i={2} className="mx-5 mt-3">
+        <Glass className="flex-row p-4">
+          <View>
+            <PlantMap zone={zone} />
+          </View>
+          <View className="ml-4 flex-1 justify-center gap-1.5">
+            <Eyebrow className="mb-1">Dove vedi il sintomo?</Eyebrow>
+            {ZONES.map((z) => {
+              const n = PROBLEMS.filter((p) => zoneOf(p) === z.id).length;
+              const active = zone === z.id;
+              return (
+                <Pressable
+                  key={z.id}
+                  onPress={() => {
+                    tap();
+                    setZone(active ? null : z.id);
+                  }}
+                  className={cn(
+                    'flex-row items-center justify-between rounded-xl px-3 py-2',
+                    active ? 'bg-[#34D88A]/15' : 'bg-white/[0.03]',
+                  )}
+                  style={{ borderWidth: 1, borderColor: active ? alpha(C.leaf, 0.45) : 'rgba(255,255,255,0.05)' }}
+                >
+                  <T className={cn('flex-1 text-xs', active ? 'font-inter-sb' : 'text-[#A9B6B0]')} numberOfLines={1}>
+                    {z.label}
+                  </T>
+                  <T className="ml-2 font-grotesk-md text-2xs" style={{ color: active ? C.leaf : '#56655F' }}>
+                    {n}
+                  </T>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Glass>
+      </Enter>
+
+      <Enter i={3} className="mt-3">
+        <ChipRow
+          options={PROBLEM_CATEGORIES.map((c) => ({
+            value: c,
+            label: c,
+            color: CAT_COLOR[c],
+            count: PROBLEMS.filter((p) => p.category === c).length,
+          }))}
+          selected={cats}
+          onToggle={(v) => setCats((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]))}
+        />
+      </Enter>
+
+      <Enter i={4} className="mx-5 mt-4">
+        <StackBar
+          parts={PROBLEM_CATEGORIES.map((c) => ({ value: list.filter((p) => p.category === c).length, color: CAT_COLOR[c] }))}
+          height={6}
+        />
+        <T className="mt-2 text-2xs text-[#56655F]">
+          {list.length} problemi su {PROBLEMS.length}
+          {zone ? ` · zona: ${ZONES.find((z) => z.id === zone)?.label.toLowerCase()}` : ''}
+        </T>
+      </Enter>
+
+      <View className="mx-5 mt-3 gap-2.5">
+        {list.map((p, i) => {
+          const color = CAT_COLOR[p.category];
+          return (
+            <Enter i={5 + Math.min(i, 8)} key={p.id}>
+              <Pressable onPress={() => setOpen(p)}>
+                <Glass className="flex-row p-4">
+                  <View className="mr-3.5 w-1 rounded-full" style={{ backgroundColor: color }} />
+                  <View className="flex-1">
+                    <View className="flex-row items-center justify-between">
+                      <Badge color={color}>{p.category}</Badge>
+                      {URGENT.has(p.id) && (
+                        <Badge tone="rose" dot>
+                          Intervieni subito
+                        </Badge>
+                      )}
+                    </View>
+                    <T className="mt-2 font-grotesk-b text-[16px]">{p.name}</T>
+                    <T className="mt-0.5 text-2xs text-[#8A9A93]">{p.where}</T>
+                    <T className="mt-1.5 text-xs leading-[17px] text-[#B7C3BE]" numberOfLines={2}>
+                      {p.symptoms[0]}
+                    </T>
+                  </View>
+                </Glass>
+              </Pressable>
+            </Enter>
+          );
+        })}
+        {list.length === 0 && (
+          <T className="mt-8 text-center text-sm text-[#8A9A93]">Nessun problema corrisponde. Prova a togliere un filtro.</T>
+        )}
+      </View>
       <ProblemDrawer problem={open} onClose={() => setOpen(null)} />
     </>
   );
@@ -224,7 +218,7 @@ function PlantMap({ zone }: { zone: Zone | null }) {
   );
 }
 
-function ProblemDrawer({ problem: p, onClose }: { problem: Problem | null; onClose: () => void }) {
+export function ProblemDrawer({ problem: p, onClose }: { problem: Problem | null; onClose: () => void }) {
   const [checked, setChecked] = useState<string[]>([]);
   if (!p)
     return (

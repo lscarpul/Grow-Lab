@@ -1,9 +1,9 @@
-import { LayoutGrid, List, TriangleAlert } from 'lucide-react-native';
+import { ClipboardPlus, LayoutGrid, List, Plus, Sprout, TriangleAlert } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Ring, Sparkline } from '../components/charts';
-import { Disclaimer, Enter, Screen, StageBadge } from '../components/layout';
-import { Badge, ChipRow, cn, Eyebrow, Glass, Progress, Segmented, T, TrendPill } from '../components/ui';
+import { Disclaimer, Enter, IconButton, Screen, StageBadge } from '../components/layout';
+import { Badge, Button, ChipRow, cn, Eyebrow, Glass, Progress, Segmented, T, tap, TrendPill } from '../components/ui';
 import { cultivarById } from '../data/cultivars';
 import { Plant } from '../data/grows';
 import { stageById } from '../data/stages';
@@ -11,6 +11,7 @@ import { cycleProgress, envScore, latest, plantAlerts, series, stageProgress } f
 import { fmtNum, relativeDay } from '../lib/math';
 import { useStore } from '../state/store';
 import { C, METRIC_COLOR, STAGE_COLOR } from '../theme/tokens';
+import { AddPlantDrawer } from './AddPlantDrawer';
 import { PlantDrawer } from './PlantDrawer';
 
 type Group = 'crescita' | 'fioritura' | 'post';
@@ -21,7 +22,8 @@ const GROUP_OF = (p: Plant): Group =>
   p.stage === 'fioritura' ? 'fioritura' : ['raccolta', 'essiccazione', 'concia'].includes(p.stage) ? 'post' : 'crescita';
 
 export function PlantsScreen() {
-  const { plants } = useStore();
+  const { plants, showDemo, setShowDemo, userPlantCount } = useStore();
+  const [adding, setAdding] = useState(false);
   const [view, setView] = useState<'lista' | 'griglia'>('lista');
   const [groups, setGroups] = useState<Group[]>([]);
   const [envs, setEnvs] = useState<Env[]>([]);
@@ -42,7 +44,7 @@ export function PlantsScreen() {
   }, [plants, groups, envs, sort]);
 
   const count = (g: Group) => plants.filter((p) => GROUP_OF(p) === g).length;
-  const avgHealth = Math.round(plants.reduce((a, p) => a + p.health, 0) / plants.length);
+  const avgHealth = plants.length ? Math.round(plants.reduce((a, p) => a + p.health, 0) / plants.length) : 0;
   const totalAlerts = plants.reduce((a, p) => a + plantAlerts(p).length, 0);
 
   return (
@@ -50,8 +52,30 @@ export function PlantsScreen() {
       <Screen
         eyebrow="Diario di coltivazione"
         title="Le mie piante"
-        subtitle="Ogni pianta ha sensori, fasi, consigli e diario. Tocca una scheda per aprire il dettaglio."
+        subtitle="Aggiungi le tue piante, registra le misure e ricevi consigli per fase. Tocca una scheda per il dettaglio."
+        right={
+          <IconButton active onPress={() => setAdding(true)}>
+            <Plus size={20} color={C.leaf} />
+          </IconButton>
+        }
       >
+        {userPlantCount === 0 && (
+          <Enter i={1} className="mx-5 mt-5">
+            <Pressable onPress={() => setAdding(true)}>
+              <Glass className="flex-row items-center p-4" glow={C.leaf}>
+                <View className="h-11 w-11 items-center justify-center rounded-2xl bg-[#34D88A]/15">
+                  <Sprout size={20} color={C.leaf} />
+                </View>
+                <View className="ml-3 flex-1">
+                  <T className="font-inter-sb text-[14px]">Aggiungi la tua prima pianta</T>
+                  <T className="mt-0.5 text-xs leading-[17px] text-[#8A9A93]">
+                    Genetica, fase e spazio: l'app calcola i giorni, stima la raccolta e ti dà i compiti del giorno.
+                  </T>
+                </View>
+              </Glass>
+            </Pressable>
+          </Enter>
+        )}
         {/* KPI strip */}
         <Enter i={1} className="mx-5 mt-5 flex-row gap-3">
           {[
@@ -110,7 +134,34 @@ export function PlantsScreen() {
           />
         </Enter>
 
-        {filtered.length === 0 && <T className="mx-5 mt-10 text-center text-sm text-[#8A9A93]">Nessuna pianta con questi filtri.</T>}
+        <Enter i={3} className="mx-5 mt-3">
+          <Pressable
+            onPress={() => {
+              tap();
+              setShowDemo(!showDemo);
+            }}
+            className="flex-row items-center justify-between rounded-2xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-2.5"
+          >
+            <View className="flex-1 pr-3">
+              <T className="font-inter-sb text-xs">Piante d'esempio</T>
+              <T className="text-2xs text-[#8A9A93]">6 coltivazioni dimostrative con dati simulati</T>
+            </View>
+            <View className={cn('h-6 w-11 justify-center rounded-full px-0.5', showDemo ? 'bg-[#34D88A]' : 'bg-white/15')}>
+              <View className={cn('h-5 w-5 rounded-full bg-white', showDemo && 'self-end')} />
+            </View>
+          </Pressable>
+        </Enter>
+
+        {filtered.length === 0 && (
+          <View className="mx-5 mt-8 items-center">
+            <T className="text-center text-sm text-[#8A9A93]">
+              {plants.length ? 'Nessuna pianta con questi filtri.' : 'Non hai ancora piante nel diario.'}
+            </T>
+            {!plants.length && (
+              <Button className="mt-4" label="Aggiungi pianta" icon={<Plus size={16} color="#05080A" />} onPress={() => setAdding(true)} />
+            )}
+          </View>
+        )}
 
         {view === 'lista' ? (
           <View className="mx-5 mt-4 gap-3">
@@ -132,6 +183,7 @@ export function PlantsScreen() {
         <Disclaimer />
       </Screen>
       <PlantDrawer plant={open} onClose={() => setOpen(null)} />
+      <AddPlantDrawer open={adding} onClose={() => setAdding(false)} />
     </>
   );
 }
@@ -169,25 +221,38 @@ function PlantRow({ plant: p, onPress }: { plant: Plant; onPress: () => void }) 
             <View className="mt-1.5 flex-row items-center gap-1.5">
               <StageBadge stage={p.stage} />
               <Badge tone={p.env === 'indoor' ? 'violet' : 'amber'}>{p.env === 'indoor' ? 'Indoor' : 'Outdoor'}</Badge>
+              {p.demo && <Badge>Esempio</Badge>}
             </View>
           </View>
         </View>
 
-        <View className="mt-4 flex-row">
-          {[
-            { label: 'Temp', value: `${fmtNum(last.temp, 1)}°`, data: series(p, 'temp', 10).map((d) => d.value), color: METRIC_COLOR.temp },
-            { label: 'UR', value: `${last.rh}%`, data: series(p, 'rh', 10).map((d) => d.value), color: METRIC_COLOR.rh },
-            { label: 'VPD', value: fmtNum(last.vpd, 2), data: series(p, 'vpd', 10).map((d) => d.value), color: METRIC_COLOR.vpd },
-          ].map((m, i) => (
-            <View key={m.label} className={cn('flex-1', i > 0 && 'pl-3')}>
-              <View className="flex-row items-baseline justify-between">
-                <T className="text-2xs text-[#8A9A93]">{m.label}</T>
-                <T className="font-grotesk text-[13px]">{m.value}</T>
+        {!last ? (
+          <View className="mt-4 flex-row items-center rounded-2xl border border-dashed border-[#38BDF8]/30 px-3 py-2.5">
+            <ClipboardPlus size={15} color={C.sky} />
+            <T className="ml-2 flex-1 text-xs text-[#9FB0A9]">Nessuna misura: apri la scheda e registra temperatura, umidità e pH.</T>
+          </View>
+        ) : (
+          <View className="mt-4 flex-row">
+            {[
+              {
+                label: 'Temp',
+                value: `${fmtNum(last.temp, 1)}°`,
+                data: series(p, 'temp', 10).map((d) => d.value),
+                color: METRIC_COLOR.temp,
+              },
+              { label: 'UR', value: `${last.rh}%`, data: series(p, 'rh', 10).map((d) => d.value), color: METRIC_COLOR.rh },
+              { label: 'VPD', value: fmtNum(last.vpd, 2), data: series(p, 'vpd', 10).map((d) => d.value), color: METRIC_COLOR.vpd },
+            ].map((m, i) => (
+              <View key={m.label} className={cn('flex-1', i > 0 && 'pl-3')}>
+                <View className="flex-row items-baseline justify-between">
+                  <T className="text-2xs text-[#8A9A93]">{m.label}</T>
+                  <T className="font-grotesk text-[13px]">{m.value}</T>
+                </View>
+                <Sparkline data={m.data} color={m.color} width={92} height={24} />
               </View>
-              <Sparkline data={m.data} color={m.color} width={92} height={24} />
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        )}
 
         <View className="mt-3 flex-row items-center">
           <View className="flex-1">

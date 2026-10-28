@@ -1,0 +1,16 @@
+{
+  "name": "grow-lab-diagnosis",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "esbuild test/worker.test.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/worker.test.mjs --log-level=warning && node node_modules/.cache/worker.test.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261028.1",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.154.0"
+  }
+}

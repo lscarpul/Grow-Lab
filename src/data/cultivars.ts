@@ -453,7 +453,48 @@ export const CULTIVARS: Cultivar[] = [
   },
 ];
 
-export const cultivarById = (id: string) => CULTIVARS.find((c) => c.id === id);
+/** Placeholders for plants whose exact genetics the grower does not know. Not listed in the catalog. */
+const genericBase = {
+  lineage: 'Genetica non specificata',
+  dominance: 'ibrida' as const,
+  thc: [15, 22] as [number, number],
+  cbd: [0.1, 0.5] as [number, number],
+  yieldOutdoor: [100, 500] as [number, number],
+  heightIndoor: [60, 140] as [number, number],
+  stretch: 1.8,
+  difficulty: 2,
+  moldResistance: 3,
+  pestResistance: 3,
+  coldTolerance: 3,
+  terpenes: [{ name: 'Non noto', share: 100, note: '' }],
+  aroma: [],
+  community: { grows: 0, trend: 0, successRate: 0, avgYield: 0 },
+  growerNotes: ['Segui i tempi indicati sulla confezione dei semi, se disponibili.'],
+};
+
+export const GENERIC_CULTIVARS: Cultivar[] = [
+  {
+    ...genericBase,
+    id: 'generica-auto',
+    name: 'Autofiorente generica',
+    tags: ['ibrida', 'autofiorente'],
+    floweringDays: [49, 63],
+    seedToHarvestDays: [70, 84],
+    yieldIndoor: [300, 450],
+    outdoorHarvest: '~75 giorni dalla semina',
+  },
+  {
+    ...genericBase,
+    id: 'generica-foto',
+    name: 'Fotoperiodica generica',
+    tags: ['ibrida', 'fotoperiodica'],
+    floweringDays: [56, 70],
+    yieldIndoor: [400, 550],
+    outdoorHarvest: 'Inizio – metà ottobre',
+  },
+];
+
+export const cultivarById = (id: string) => CULTIVARS.find((c) => c.id === id) ?? GENERIC_CULTIVARS.find((c) => c.id === id);
 
 /** Normalised 0–1 scores used by the radar chart. */
 export function cultivarScores(c: Cultivar) {

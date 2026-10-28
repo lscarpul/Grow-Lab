@@ -17,26 +17,37 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Background } from './src/components/Background';
 import { TabBar, TabId } from './src/components/layout';
 import { plantAlerts } from './src/lib/insights';
-import { DiagnoseScreen } from './src/screens/DiagnoseScreen';
+import { AgeGate } from './src/screens/AgeGate';
 import { GeneticsScreen } from './src/screens/GeneticsScreen';
 import { GuideScreen } from './src/screens/GuideScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { KitScreen } from './src/screens/KitScreen';
 import { PlantsScreen } from './src/screens/PlantsScreen';
+import { ToolsScreen } from './src/screens/ToolsScreen';
 import { StoreProvider, useStore } from './src/state/store';
 
 function Shell() {
   const [tab, setTab] = useState<TabId>('home');
-  const { plants } = useStore();
+  const { plants, adult, confirmAdult } = useStore();
   const alertCount = useMemo(() => plants.flatMap(plantAlerts).length, [plants]);
+  if (adult === null) return <View className="flex-1 bg-[#05080A]" />;
+  if (!adult)
+    return (
+      <View className="flex-1 bg-[#05080A]">
+        <Background />
+        <AgeGate onConfirm={confirmAdult} />
+      </View>
+    );
   return (
     <View className="flex-1 bg-[#05080A]">
       <Background />
       <Animated.View key={tab} entering={FadeIn.duration(260)} className="flex-1">
-        {tab === 'home' && <HomeScreen />}
+        {tab === 'home' && <HomeScreen onNavigate={setTab} />}
         {tab === 'piante' && <PlantsScreen />}
+        {tab === 'kit' && <KitScreen />}
         {tab === 'genetiche' && <GeneticsScreen />}
         {tab === 'guida' && <GuideScreen />}
-        {tab === 'diagnosi' && <DiagnoseScreen />}
+        {tab === 'strumenti' && <ToolsScreen />}
       </Animated.View>
       <TabBar tab={tab} onChange={setTab} badges={{ piante: alertCount }} />
     </View>

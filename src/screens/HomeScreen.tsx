@@ -1,8 +1,12 @@
 import {
   Bell,
+  Camera,
   CalendarClock,
   Check,
   ChevronRight,
+  ClipboardPlus,
+  ShoppingBag,
+  Sprout,
   Droplets,
   FlaskConical,
   Gauge,
@@ -13,10 +17,12 @@ import {
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { AreaChart, Ring, Sparkline, StackBar } from '../components/charts';
-import { Disclaimer, Enter, IconButton, Screen, StageBadge } from '../components/layout';
-import { Badge, cn, Eyebrow, Glass, SectionHeader, Segmented, T, tap, TrendPill } from '../components/ui';
+import { Disclaimer, Enter, IconButton, Screen, StageBadge, TabId } from '../components/layout';
+import { Badge, Button, cn, Eyebrow, Glass, Progress, SectionHeader, Segmented, T, tap, TrendPill } from '../components/ui';
 import { cultivarById } from '../data/cultivars';
 import { Plant } from '../data/grows';
+import { buildKit, itemTotal, SPACES } from '../data/kit';
+import { fmtEur } from '../data/shop';
 import { METRICS, MetricKey, STAGE_ORDER, STAGE_RANGES } from '../data/ranges';
 import { stageById } from '../data/stages';
 import { cycleProgress, envScore, latest, metricTrend, plantAlerts, plantTasks, series, stageProgress } from '../lib/insights';
@@ -35,8 +41,8 @@ function greeting(d = new Date()) {
 
 const LIVING = ['germinazione', 'piantina', 'vegetativa', 'fioritura'];
 
-export function HomeScreen() {
-  const { plants, doneTasks, toggleTask } = useStore();
+export function HomeScreen({ onNavigate }: { onNavigate: (t: TabId) => void }) {
+  const { plants, doneTasks, toggleTask, kit, owned } = useStore();
   const [open, setOpen] = useState<Plant | null>(null);
   const living = plants.filter((p) => LIVING.includes(p.stage));
   const [focusId, setFocusId] = useState(living[0]?.id);
@@ -53,6 +59,88 @@ export function HomeScreen() {
       ),
     [living],
   );
+  const kitItems = useMemo(() => buildKit(kit), [kit]);
+  const kitOwned = kitItems.filter((i) => owned.includes(i.id));
+  const kitLeft = kitItems.filter((i) => !owned.includes(i.id)).reduce((a, i) => a + itemTotal(i), 0);
+  const kitCard = (
+    <Pressable onPress={() => onNavigate('kit')}>
+      <Glass className="p-4" glow={C.amber}>
+        <View className="flex-row items-center">
+          <View className="h-10 w-10 items-center justify-center rounded-2xl" style={{ backgroundColor: alpha(C.amber, 0.15) }}>
+            <ShoppingBag size={18} color={C.amber} />
+          </View>
+          <View className="ml-3 flex-1">
+            <T className="font-inter-sb text-[13px]">Il tuo kit · {SPACES.find((x) => x.id === kit.space)?.label}</T>
+            <T className="text-2xs text-[#8A9A93]">
+              {kitOwned.length}/{kitItems.length} articoli · mancano ~{fmtEur(Math.round(kitLeft))}
+            </T>
+          </View>
+          <ChevronRight size={16} color="#8A9A93" />
+        </View>
+        <View className="mt-3">
+          <Progress value={kitItems.length ? kitOwned.length / kitItems.length : 0} color={C.amber} />
+        </View>
+      </Glass>
+    </Pressable>
+  );
+
+  if (!focus)
+    return (
+      <Screen
+        eyebrow={`${greeting()} · ${fmtDate(new Date())}`}
+        title="Grow Lab"
+        subtitle="Iniziamo: tre passi per partire con il piede giusto."
+      >
+        {[
+          {
+            n: 1,
+            Icon: ShoppingBag,
+            color: C.amber,
+            title: 'Prepara il kit',
+            text: 'Scegli spazio e budget: ti diciamo cosa comprare, con prezzi reali e link ai negozi.',
+            tab: 'kit' as TabId,
+          },
+          {
+            n: 2,
+            Icon: Sprout,
+            color: C.leaf,
+            title: 'Aggiungi la tua pianta',
+            text: 'Genetica, fase e vaso: calcoliamo giorni, raccolta stimata e compiti di oggi.',
+            tab: 'piante' as TabId,
+          },
+          {
+            n: 3,
+            Icon: Camera,
+            color: C.violet,
+            title: 'Fotografa i problemi',
+            text: "L'AI gratuita riconosce carenze, parassiti e muffe in base al tipo di pianta.",
+            tab: 'strumenti' as TabId,
+          },
+        ].map((s, i) => (
+          <Enter i={1 + i} key={s.n} className="mx-5 mt-3">
+            <Pressable onPress={() => onNavigate(s.tab)}>
+              <Glass className="flex-row items-center p-4" glow={s.color}>
+                <View className="h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: alpha(s.color, 0.15) }}>
+                  <s.Icon size={20} color={s.color} />
+                </View>
+                <View className="ml-3.5 flex-1">
+                  <T className="font-grotesk text-[17px]">
+                    {s.n}. {s.title}
+                  </T>
+                  <T className="mt-0.5 text-xs leading-[17px] text-[#8A9A93]">{s.text}</T>
+                </View>
+                <ChevronRight size={16} color="#8A9A93" />
+              </Glass>
+            </Pressable>
+          </Enter>
+        ))}
+        <Enter i={5} className="mx-5 mt-6">
+          {kitCard}
+        </Enter>
+        <Disclaimer />
+      </Screen>
+    );
+
   const last = latest(focus);
   const sp = stageProgress(focus);
   const cp = cycleProgress(focus);
@@ -146,7 +234,7 @@ export function HomeScreen() {
                 {[
                   { label: 'Salute', value: `${focus.health}`, trend: focus.healthTrend },
                   { label: 'Ambiente', value: `${envScore(focus)}%`, trend: null },
-                  { label: 'Altezza', value: `${last.height} cm`, trend: null },
+                  { label: 'Altezza', value: last?.height != null ? `${last.height} cm` : '—', trend: null },
                   { label: 'Ciclo', value: `${Math.round(cp.pct * 100)}%`, trend: null },
                 ].map((s, i) => (
                   <View key={s.label} className={cn('flex-1', i > 0 && 'border-l border-white/[0.06] pl-3')}>
@@ -164,133 +252,152 @@ export function HomeScreen() {
           </Pressable>
         </Enter>
 
-        {/* Bento: VPD gauge + temp/RH */}
-        <View className="mx-5 mt-3 flex-row gap-3">
-          <Enter i={3} className="flex-1">
-            <Glass className="flex-1 p-4" glow={C.violet}>
-              <View className="flex-row items-center justify-between">
-                <Eyebrow>VPD</Eyebrow>
-                <Gauge size={14} color={C.violet} />
-              </View>
-              <VpdGauge value={last.vpd} ideal={ranges.vpd} />
-              <T className="text-center text-2xs leading-4 text-[#8A9A93]">
-                Ideale in {stageById(focus.stage)?.name.toLowerCase()}:{' '}
-                {ranges.vpd ? `${fmtNum(ranges.vpd[0], 1)}–${fmtNum(ranges.vpd[1], 1)} kPa` : '—'}
+        <Enter i={3} className="mx-5 mt-3">
+          {kitCard}
+        </Enter>
+
+        {!last ? (
+          <Enter i={4} className="mx-5 mt-3">
+            <Glass className="items-center p-5" glow={C.sky}>
+              <ClipboardPlus size={22} color={C.sky} />
+              <T className="mt-2 font-grotesk text-[17px]">Nessuna misura per {focus.nickname}</T>
+              <T className="mt-1 text-center text-xs leading-[17px] text-[#8A9A93]">
+                Registra temperatura, umidità, pH ed EC per vedere VPD, grafici e avvisi.
               </T>
-              <View className="mt-3 items-center">
-                <TrendPill value={metricTrend(focus, 'vpd')} label="7 gg" goodWhenUp={focus.stage === 'fioritura'} />
-              </View>
+              <Button className="mt-4 self-stretch" color={C.sky} label="Registra misure" onPress={() => setOpen(focus)} />
             </Glass>
           </Enter>
-          <View className="flex-1 gap-3">
-            {tiles.map(({ key, Icon, goodUp }, idx) => {
-              const v = last[key] as number;
-              const r = ranges[key];
-              const ok = r ? v >= r[0] && v <= r[1] : true;
-              return (
-                <Enter i={4 + idx} key={key}>
-                  <Glass className="p-3.5">
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-row items-center">
-                        <Icon size={13} color={METRIC_COLOR[key]} />
-                        <Eyebrow className="ml-1.5">{METRICS[key].short}</Eyebrow>
-                      </View>
-                      <View className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ok ? C.leaf : C.amber }} />
-                    </View>
-                    <View className="mt-1 flex-row items-end justify-between">
-                      <T className="font-grotesk-b text-[24px]">
-                        {fmtNum(v, METRICS[key].digits)}
-                        <T className="font-inter text-xs text-[#8A9A93]">{METRICS[key].unit}</T>
-                      </T>
-                      <Sparkline data={series(focus, key, 10).map((d) => d.value)} color={METRIC_COLOR[key]} width={64} height={26} />
-                    </View>
-                    <TrendPill value={metricTrend(focus, key)} goodWhenUp={goodUp} label="vs sett. prec." />
-                  </Glass>
-                </Enter>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Bento: small tiles */}
-        <Enter i={6} className="mx-5 mt-3 flex-row gap-3">
-          {[
-            { label: 'pH', value: last.ph, digits: 2, unit: '', color: METRIC_COLOR.ph, Icon: FlaskConical, range: ranges.ph },
-            { label: 'EC', value: last.ec, digits: 1, unit: 'mS', color: METRIC_COLOR.ec, Icon: FlaskConical, range: ranges.ec },
-            {
-              label: 'DLI',
-              value: last.ppfd ? dli(last.ppfd, lightHours) : null,
-              digits: 0,
-              unit: 'mol',
-              color: METRIC_COLOR.ppfd,
-              Icon: Sun,
-              range: ranges.ppfd ? ([dli(ranges.ppfd[0], lightHours), dli(ranges.ppfd[1], lightHours)] as [number, number]) : undefined,
-            },
-          ].map((t) => {
-            const ok = t.value !== null && t.range ? t.value >= t.range[0] && t.value <= t.range[1] : true;
-            return (
-              <Glass key={t.label} className="flex-1 p-3.5">
-                <View className="flex-row items-center justify-between">
-                  <Eyebrow>{t.label}</Eyebrow>
-                  <t.Icon size={12} color={t.color} />
-                </View>
-                <T className="mt-1.5 font-grotesk-b text-xl" style={{ color: ok ? '#ECF3EF' : C.amber }}>
-                  {t.value === null ? '—' : fmtNum(t.value, t.digits)}
-                  <T className="font-inter text-2xs text-[#8A9A93]"> {t.unit}</T>
-                </T>
-                <T className="mt-0.5 text-[9.5px] text-[#56655F]">
-                  {t.range ? `ideale ${fmtNum(t.range[0], t.digits)}–${fmtNum(t.range[1], t.digits)}` : 'n/d in questa fase'}
-                </T>
-              </Glass>
-            );
-          })}
-        </Enter>
-
-        {/* Trend chart */}
-        <SectionHeader title="Andamento ambiente" caption={`${focus.nickname} · ultimi 21 giorni · tieni premuto per i dettagli`} />
-        <Enter i={7} className="mx-5">
-          <Glass className="px-4 pb-3 pt-3">
-            <Segmented
-              value={metric}
-              onChange={setMetric}
-              options={(['temp', 'rh', 'vpd', 'ec'] as MetricKey[]).map((k) => ({ value: k, label: METRICS[k].short }))}
-            />
-            <View className="mt-3 flex-row items-baseline justify-between">
-              <View className="flex-row items-baseline">
-                <T className="font-grotesk-b text-[26px]" style={{ color: METRIC_COLOR[metric] }}>
-                  {fmtNum(mean(series(focus, metric, 7).map((d) => d.value)), METRICS[metric].digits)}
-                </T>
-                <T className="ml-1 text-xs text-[#8A9A93]">{METRICS[metric].unit} media 7 gg</T>
+        ) : (
+          <>
+            {/* Bento: VPD gauge + temp/RH */}
+            <View className="mx-5 mt-3 flex-row gap-3">
+              <Enter i={3} className="flex-1">
+                <Glass className="flex-1 p-4" glow={C.violet}>
+                  <View className="flex-row items-center justify-between">
+                    <Eyebrow>VPD</Eyebrow>
+                    <Gauge size={14} color={C.violet} />
+                  </View>
+                  <VpdGauge value={last.vpd} ideal={ranges.vpd} />
+                  <T className="text-center text-2xs leading-4 text-[#8A9A93]">
+                    Ideale in {stageById(focus.stage)?.name.toLowerCase()}:{' '}
+                    {ranges.vpd ? `${fmtNum(ranges.vpd[0], 1)}–${fmtNum(ranges.vpd[1], 1)} kPa` : '—'}
+                  </T>
+                  <View className="mt-3 items-center">
+                    <TrendPill value={metricTrend(focus, 'vpd')} label="7 gg" goodWhenUp={focus.stage === 'fioritura'} />
+                  </View>
+                </Glass>
+              </Enter>
+              <View className="flex-1 gap-3">
+                {tiles.map(({ key, Icon, goodUp }, idx) => {
+                  const v = last[key] as number;
+                  const r = ranges[key];
+                  const ok = r ? v >= r[0] && v <= r[1] : true;
+                  return (
+                    <Enter i={4 + idx} key={key}>
+                      <Glass className="p-3.5">
+                        <View className="flex-row items-center justify-between">
+                          <View className="flex-row items-center">
+                            <Icon size={13} color={METRIC_COLOR[key]} />
+                            <Eyebrow className="ml-1.5">{METRICS[key].short}</Eyebrow>
+                          </View>
+                          <View className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ok ? C.leaf : C.amber }} />
+                        </View>
+                        <View className="mt-1 flex-row items-end justify-between">
+                          <T className="font-grotesk-b text-[24px]">
+                            {fmtNum(v, METRICS[key].digits)}
+                            <T className="font-inter text-xs text-[#8A9A93]">{METRICS[key].unit}</T>
+                          </T>
+                          <Sparkline data={series(focus, key, 10).map((d) => d.value)} color={METRIC_COLOR[key]} width={64} height={26} />
+                        </View>
+                        <TrendPill value={metricTrend(focus, key)} goodWhenUp={goodUp} label="vs sett. prec." />
+                      </Glass>
+                    </Enter>
+                  );
+                })}
               </View>
-              <TrendPill value={metricTrend(focus, metric)} goodWhenUp={false} />
             </View>
-            <AreaChart
-              id={`home-${focus.id}-${metric}`}
-              data={series(focus, metric, 21)}
-              color={METRIC_COLOR[metric]}
-              unit={METRICS[metric].unit}
-              digits={METRICS[metric].digits}
-              ideal={ranges[metric]}
-              height={180}
-              extra={(i) => {
-                const rs = focus.readings.slice(-21);
-                const r = rs[i];
-                return r
-                  ? [
-                      { label: 'Fase', value: stageById(r.stage)?.name ?? '', color: STAGE_COLOR[r.stage] },
-                      { label: 'Temp · UR', value: `${fmtNum(r.temp, 1)}° · ${r.rh}%` },
-                      { label: 'VPD', value: `${fmtNum(r.vpd, 2)} kPa`, color: C.violet },
-                      ...(r.water ? [{ label: 'Acqua', value: `${fmtNum(r.water, 1)} L`, color: C.sky }] : []),
-                    ]
-                  : [];
-              }}
-            />
-            <View className="mt-1 flex-row items-center">
-              <View className="mr-1.5 h-[1px] w-4 border-t border-dashed border-[#34D88A]" />
-              <T className="text-2xs text-[#56655F]">Fascia ideale per la fase attuale</T>
-            </View>
-          </Glass>
-        </Enter>
+
+            {/* Bento: small tiles */}
+            <Enter i={6} className="mx-5 mt-3 flex-row gap-3">
+              {[
+                { label: 'pH', value: last.ph, digits: 2, unit: '', color: METRIC_COLOR.ph, Icon: FlaskConical, range: ranges.ph },
+                { label: 'EC', value: last.ec, digits: 1, unit: 'mS', color: METRIC_COLOR.ec, Icon: FlaskConical, range: ranges.ec },
+                {
+                  label: 'DLI',
+                  value: last.ppfd ? dli(last.ppfd, lightHours) : null,
+                  digits: 0,
+                  unit: 'mol',
+                  color: METRIC_COLOR.ppfd,
+                  Icon: Sun,
+                  range: ranges.ppfd ? ([dli(ranges.ppfd[0], lightHours), dli(ranges.ppfd[1], lightHours)] as [number, number]) : undefined,
+                },
+              ].map((t) => {
+                const ok = t.value !== null && t.range ? t.value >= t.range[0] && t.value <= t.range[1] : true;
+                return (
+                  <Glass key={t.label} className="flex-1 p-3.5">
+                    <View className="flex-row items-center justify-between">
+                      <Eyebrow>{t.label}</Eyebrow>
+                      <t.Icon size={12} color={t.color} />
+                    </View>
+                    <T className="mt-1.5 font-grotesk-b text-xl" style={{ color: ok ? '#ECF3EF' : C.amber }}>
+                      {t.value === null ? '—' : fmtNum(t.value, t.digits)}
+                      <T className="font-inter text-2xs text-[#8A9A93]"> {t.unit}</T>
+                    </T>
+                    <T className="mt-0.5 text-[9.5px] text-[#56655F]">
+                      {t.range ? `ideale ${fmtNum(t.range[0], t.digits)}–${fmtNum(t.range[1], t.digits)}` : 'n/d in questa fase'}
+                    </T>
+                  </Glass>
+                );
+              })}
+            </Enter>
+
+            {/* Trend chart */}
+            <SectionHeader title="Andamento ambiente" caption={`${focus.nickname} · ultimi 21 giorni · tieni premuto per i dettagli`} />
+            <Enter i={7} className="mx-5">
+              <Glass className="px-4 pb-3 pt-3">
+                <Segmented
+                  value={metric}
+                  onChange={setMetric}
+                  options={(['temp', 'rh', 'vpd', 'ec'] as MetricKey[]).map((k) => ({ value: k, label: METRICS[k].short }))}
+                />
+                <View className="mt-3 flex-row items-baseline justify-between">
+                  <View className="flex-row items-baseline">
+                    <T className="font-grotesk-b text-[26px]" style={{ color: METRIC_COLOR[metric] }}>
+                      {fmtNum(mean(series(focus, metric, 7).map((d) => d.value)), METRICS[metric].digits)}
+                    </T>
+                    <T className="ml-1 text-xs text-[#8A9A93]">{METRICS[metric].unit} media 7 gg</T>
+                  </View>
+                  <TrendPill value={metricTrend(focus, metric)} goodWhenUp={false} />
+                </View>
+                <AreaChart
+                  id={`home-${focus.id}-${metric}`}
+                  data={series(focus, metric, 21)}
+                  color={METRIC_COLOR[metric]}
+                  unit={METRICS[metric].unit}
+                  digits={METRICS[metric].digits}
+                  ideal={ranges[metric]}
+                  height={180}
+                  extra={(i) => {
+                    const rs = focus.readings.slice(-21);
+                    const r = rs[i];
+                    return r
+                      ? [
+                          { label: 'Fase', value: stageById(r.stage)?.name ?? '', color: STAGE_COLOR[r.stage] },
+                          { label: 'Temp · UR', value: `${fmtNum(r.temp, 1)}° · ${r.rh}%` },
+                          { label: 'VPD', value: `${fmtNum(r.vpd, 2)} kPa`, color: C.violet },
+                          ...(r.water ? [{ label: 'Acqua', value: `${fmtNum(r.water, 1)} L`, color: C.sky }] : []),
+                        ]
+                      : [];
+                  }}
+                />
+                <View className="mt-1 flex-row items-center">
+                  <View className="mr-1.5 h-[1px] w-4 border-t border-dashed border-[#34D88A]" />
+                  <T className="text-2xs text-[#56655F]">Fascia ideale per la fase attuale</T>
+                </View>
+              </Glass>
+            </Enter>
+          </>
+        )}
 
         {/* Alerts */}
         <SectionHeader

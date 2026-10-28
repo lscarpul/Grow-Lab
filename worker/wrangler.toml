@@ -1,0 +1,17 @@
+name = "grow-lab-diagnosis"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+# Daily counters per device and for the whole service (spend cap).
+# Create it with: npx wrangler kv namespace create USAGE  — then paste the id below.
+[[kv_namespaces]]
+binding = "USAGE"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[vars]
+DAILY_LIMIT_PER_DEVICE = "5"
+GLOBAL_DAILY_LIMIT = "400"
+
+# Secrets (never in this file):
+#   npx wrangler secret put GEMINI_API_KEY   # key from a Google Cloud project WITH billing enabled
+#   npx wrangler secret put APP_TOKEN        # optional: same value as EXPO_PUBLIC_DIAGNOSIS_TOKEN in the app
