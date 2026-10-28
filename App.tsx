@@ -10,12 +10,13 @@ import {
 } from '@expo-google-fonts/inter';
 import { SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInLeft, FadeInRight } from 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Background } from './src/components/Background';
-import { TabBar, TabId } from './src/components/layout';
+import { TABS, TabBar, TabId } from './src/components/layout';
+import { LinkSheetHost } from './src/components/LinkSheet';
 import { plantAlerts } from './src/lib/insights';
 import { AgeGate } from './src/screens/AgeGate';
 import { GeneticsScreen } from './src/screens/GeneticsScreen';
@@ -27,7 +28,13 @@ import { ToolsScreen } from './src/screens/ToolsScreen';
 import { StoreProvider, useStore } from './src/state/store';
 
 function Shell() {
-  const [tab, setTab] = useState<TabId>('home');
+  const [tab, setTabState] = useState<TabId>('home');
+  // Slide in from the side of the tab that was tapped, so switching tabs reads as moving through the bar.
+  const dir = useRef(1);
+  const setTab = (t: TabId) => {
+    dir.current = TABS.findIndex((x) => x.id === t) >= TABS.findIndex((x) => x.id === tab) ? 1 : -1;
+    setTabState(t);
+  };
   const { plants, adult, confirmAdult } = useStore();
   const alertCount = useMemo(() => plants.flatMap(plantAlerts).length, [plants]);
   if (adult === null) return <View className="flex-1 bg-[#05080A]" />;
@@ -41,7 +48,7 @@ function Shell() {
   return (
     <View className="flex-1 bg-[#05080A]">
       <Background />
-      <Animated.View key={tab} entering={FadeIn.duration(260)} className="flex-1">
+      <Animated.View key={tab} entering={(dir.current > 0 ? FadeInRight : FadeInLeft).duration(240)} style={{ flex: 1 }}>
         {tab === 'home' && <HomeScreen onNavigate={setTab} />}
         {tab === 'piante' && <PlantsScreen />}
         {tab === 'kit' && <KitScreen />}
@@ -50,6 +57,7 @@ function Shell() {
         {tab === 'strumenti' && <ToolsScreen />}
       </Animated.View>
       <TabBar tab={tab} onChange={setTab} badges={{ piante: alertCount }} />
+      <LinkSheetHost />
     </View>
   );
 }

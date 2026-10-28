@@ -99,7 +99,7 @@ export function OutdoorCalendar() {
                   tap();
                   setMonth(i);
                 }}
-                className="w-[15.5%] items-center rounded-xl py-2"
+                className="w-[15.5%] items-center rounded-xl py-2 active:opacity-70 active:scale-[0.97]"
                 style={{
                   backgroundColor: active ? alpha(C.leaf, 0.16) : i === now ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
                   borderWidth: 1,

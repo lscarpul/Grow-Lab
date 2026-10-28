@@ -61,7 +61,7 @@ export function PlantsScreen() {
       >
         {userPlantCount === 0 && (
           <Enter i={1} className="mx-5 mt-5">
-            <Pressable onPress={() => setAdding(true)}>
+            <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={() => setAdding(true)}>
               <Glass className="flex-row items-center p-4" glow={C.leaf}>
                 <View className="h-11 w-11 items-center justify-center rounded-2xl bg-[#34D88A]/15">
                   <Sprout size={20} color={C.leaf} />
@@ -140,7 +140,7 @@ export function PlantsScreen() {
               tap();
               setShowDemo(!showDemo);
             }}
-            className="flex-row items-center justify-between rounded-2xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-2.5"
+            className="flex-row items-center justify-between rounded-2xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-2.5 active:opacity-70 active:scale-[0.97]"
           >
             <View className="flex-1 pr-3">
               <T className="font-inter-sb text-xs">Piante d'esempio</T>
@@ -196,7 +196,7 @@ function PlantRow({ plant: p, onPress }: { plant: Plant; onPress: () => void }) 
   const c = STAGE_COLOR[p.stage];
   const lastLog = p.logs[0];
   return (
-    <Pressable onPress={onPress}>
+    <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={onPress}>
       <Glass className="p-4" glow={alerts.length ? C.rose : undefined}>
         <View className="flex-row items-center">
           <Ring value={sp.pct} size={64} stroke={6} color={c} color2={C.lime}>
@@ -286,7 +286,7 @@ function PlantTile({ plant: p, onPress }: { plant: Plant; onPress: () => void })
   const c = STAGE_COLOR[p.stage];
   const score = envScore(p);
   return (
-    <Pressable onPress={onPress}>
+    <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={onPress}>
       <Glass className="items-center p-4" glow={c}>
         <Ring value={sp.pct} size={86} stroke={8} color={c} color2={C.lime}>
           <T className="font-grotesk-b text-xl">{sp.day}</T>

@@ -101,7 +101,7 @@ export function PhotoScanner() {
     <>
       {/* Status */}
       <Enter i={1} className="mx-5 mt-4">
-        <Pressable disabled={mode === 'server'} onPress={() => setSettings(true)}>
+        <Pressable className="active:opacity-70 active:scale-[0.97]" disabled={mode === 'server'} onPress={() => setSettings(true)}>
           <Glass className="flex-row items-center p-4" glow={mode === 'demo' ? C.amber : C.leaf}>
             <View
               className="h-10 w-10 items-center justify-center rounded-2xl"
@@ -141,7 +141,7 @@ export function PhotoScanner() {
                 tap();
                 setPlantId(p?.id ?? null);
               }}
-              className="w-[140px] rounded-2xl p-3"
+              className="w-[140px] rounded-2xl p-3 active:opacity-70 active:scale-[0.97]"
               style={{
                 backgroundColor: active ? alpha(color, 0.14) : 'rgba(255,255,255,0.03)',
                 borderWidth: 1,
@@ -243,7 +243,7 @@ export function PhotoScanner() {
                     setImage(s.imageUri);
                     setResult({ d: s.result, demo: s.demo });
                   }}
-                  className="flex-row items-center rounded-2xl border border-white/[0.07] bg-white/[0.03] p-2.5"
+                  className="flex-row items-center rounded-2xl border border-white/[0.07] bg-white/[0.03] p-2.5 active:opacity-70 active:scale-[0.97]"
                 >
                   <Image source={{ uri: s.imageUri }} style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: '#0E161B' }} />
                   <View className="ml-3 flex-1">
@@ -316,7 +316,7 @@ function ResultCard({
       {demo && (
         <Pressable
           onPress={onConfigure}
-          className="mb-2 flex-row items-center rounded-2xl px-3.5 py-2.5"
+          className="mb-2 flex-row items-center rounded-2xl px-3.5 py-2.5 active:opacity-70 active:scale-[0.97]"
           style={{ backgroundColor: alpha(C.amber, 0.1), borderWidth: 1, borderColor: alpha(C.amber, 0.3) }}
         >
           <TriangleAlert size={14} color={C.amber} />
@@ -342,7 +342,7 @@ function ResultCard({
                 const p = PROBLEMS.find((x) => x.id === f.problemId);
                 const color = p ? CAT_COLOR[p.category] : '#9AA9A2';
                 return (
-                  <Pressable key={`${f.problemId}-${f.name}`} disabled={!p} onPress={() => p && onProblem(p)}>
+                  <Pressable className="active:opacity-70 active:scale-[0.97]" key={`${f.problemId}-${f.name}`} disabled={!p} onPress={() => p && onProblem(p)}>
                     <View className="flex-row items-baseline justify-between">
                       <T className="flex-1 font-inter-sb text-[13px]">{f.name}</T>
                       <T className="font-grotesk-b text-[15px]" style={{ color }}>

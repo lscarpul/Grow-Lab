@@ -63,7 +63,7 @@ export function HomeScreen({ onNavigate }: { onNavigate: (t: TabId) => void }) {
   const kitOwned = kitItems.filter((i) => owned.includes(i.id));
   const kitLeft = kitItems.filter((i) => !owned.includes(i.id)).reduce((a, i) => a + itemTotal(i), 0);
   const kitCard = (
-    <Pressable onPress={() => onNavigate('kit')}>
+    <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={() => onNavigate('kit')}>
       <Glass className="p-4" glow={C.amber}>
         <View className="flex-row items-center">
           <View className="h-10 w-10 items-center justify-center rounded-2xl" style={{ backgroundColor: alpha(C.amber, 0.15) }}>
@@ -118,7 +118,7 @@ export function HomeScreen({ onNavigate }: { onNavigate: (t: TabId) => void }) {
           },
         ].map((s, i) => (
           <Enter i={1 + i} key={s.n} className="mx-5 mt-3">
-            <Pressable onPress={() => onNavigate(s.tab)}>
+            <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={() => onNavigate(s.tab)}>
               <Glass className="flex-row items-center p-4" glow={s.color}>
                 <View className="h-12 w-12 items-center justify-center rounded-2xl" style={{ backgroundColor: alpha(s.color, 0.15) }}>
                   <s.Icon size={20} color={s.color} />
@@ -182,7 +182,7 @@ export function HomeScreen({ onNavigate }: { onNavigate: (t: TabId) => void }) {
                     tap();
                     setFocusId(p.id);
                   }}
-                  className={cn(
+                  className={cn('active:opacity-70 active:scale-[0.97]', 
                     'flex-1 rounded-2xl border px-2.5 py-2',
                     active ? 'border-white/20 bg-white/[0.08]' : 'border-white/[0.06] bg-white/[0.02]',
                   )}
@@ -201,7 +201,7 @@ export function HomeScreen({ onNavigate }: { onNavigate: (t: TabId) => void }) {
 
         {/* Hero */}
         <Enter i={2} className="mx-5 mt-3">
-          <Pressable onPress={() => setOpen(focus)}>
+          <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={() => setOpen(focus)}>
             <Glass glow={STAGE_COLOR[focus.stage]} className="p-5">
               <View className="flex-row items-center">
                 <Ring value={sp.pct} size={128} stroke={11} color={STAGE_COLOR[focus.stage]} color2={C.lime}>
@@ -411,7 +411,7 @@ export function HomeScreen({ onNavigate }: { onNavigate: (t: TabId) => void }) {
             const c = a.level === 'bad' ? C.rose : C.amber;
             return (
               <Enter i={8 + i} key={a.id}>
-                <Pressable onPress={() => setOpen(p)}>
+                <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={() => setOpen(p)}>
                   <View
                     className="flex-row items-start rounded-[20px] p-3.5"
                     style={{ backgroundColor: alpha(c, 0.07), borderWidth: 1, borderColor: alpha(c, 0.22) }}
@@ -455,7 +455,7 @@ export function HomeScreen({ onNavigate }: { onNavigate: (t: TabId) => void }) {
                     tap();
                     toggleTask(t.id);
                   }}
-                  className={cn('flex-row items-start px-2.5 py-3', i > 0 && 'border-t border-white/[0.05]')}
+                  className={cn('active:opacity-70 active:scale-[0.97]', 'flex-row items-start px-2.5 py-3', i > 0 && 'border-t border-white/[0.05]')}
                 >
                   <View
                     className="mt-0.5 h-5 w-5 items-center justify-center rounded-md border"
@@ -488,7 +488,7 @@ export function HomeScreen({ onNavigate }: { onNavigate: (t: TabId) => void }) {
             {upcoming.map((p, i) => {
               const left = daysBetween(new Date(), p.expectedHarvest!);
               return (
-                <Pressable key={p.id} onPress={() => setOpen(p)} className={cn(i > 0 && 'mt-4')}>
+                <Pressable key={p.id} onPress={() => setOpen(p)} className={cn('active:opacity-70 active:scale-[0.97]', i > 0 && 'mt-4')}>
                   <View className="mb-1.5 flex-row items-baseline justify-between">
                     <T className="font-inter-sb text-[13px]">{p.nickname}</T>
                     <T className="text-xs text-[#8A9A93]">

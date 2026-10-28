@@ -131,7 +131,7 @@ export function GuideScreen() {
             <View className="mx-5">
               {STAGES.map((s, i) => (
                 <Enter i={5 + i} key={s.id}>
-                  <Pressable onPress={() => setStage(s)} className="flex-row">
+                  <Pressable onPress={() => setStage(s)} className="flex-row active:opacity-70 active:scale-[0.97]">
                     <View className="items-center" style={{ width: 34 }}>
                       <View
                         className="h-[34px] w-[34px] items-center justify-center rounded-full"
@@ -183,7 +183,7 @@ export function GuideScreen() {
                 const n = CULTIVARS.filter((c) => c.tags.includes(s.id)).length;
                 return (
                   <Enter i={2 + i} key={s.id} className={wide ? 'w-full' : 'w-[48.5%]'}>
-                    <Pressable onPress={() => setStrain(s)}>
+                    <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={() => setStrain(s)}>
                       <Glass className="p-4" glow={color}>
                         <View className="flex-row items-center justify-between">
                           <View className="h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: alpha(color, 0.15) }}>

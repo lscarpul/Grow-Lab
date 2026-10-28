@@ -1,10 +1,9 @@
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { ArrowDownRight, ArrowUpRight, Minus, Plus } from 'lucide-react-native';
-import { ReactNode, useEffect, useState } from 'react';
-import { LayoutChangeEvent, Platform, Pressable, ScrollView, StyleSheet, Text, TextProps, View, ViewProps } from 'react-native';
+import { ReactNode, useEffect, useRef, useState } from 'react';
+import { Animated, LayoutChangeEvent, Platform, Pressable, ScrollView, StyleSheet, Text, TextProps, View, ViewProps } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { alpha, C } from '../theme/tokens';
 import { fmtSigned } from '../lib/math';
 
@@ -177,7 +176,7 @@ export function ChipRow<V extends string>({
               tap();
               onToggle(o.value);
             }}
-            className="flex-row items-center rounded-full px-3.5 py-2"
+            className="flex-row items-center rounded-full px-3.5 py-2 active:opacity-70 active:scale-[0.97]"
             style={{
               backgroundColor: active ? alpha(c, 0.16) : 'rgba(255,255,255,0.04)',
               borderWidth: 1,
@@ -217,12 +216,17 @@ export function Segmented<V extends string>({
     0,
     options.findIndex((o) => o.value === value),
   );
-  const x = useSharedValue(0);
-  const seg = width / options.length;
+  // Core Animated so the highlight also slides inside drawers (Modals) on Android.
+  const x = useRef(new Animated.Value(0)).current;
+  const seg = Math.max(0, width - 8) / options.length;
+  const placed = useRef(false);
   useEffect(() => {
-    x.value = withSpring(index * seg, { damping: 18, stiffness: 180 });
+    if (!seg) return;
+    if (!placed.current) {
+      x.setValue(index * seg);
+      placed.current = true;
+    } else Animated.spring(x, { toValue: index * seg, damping: 18, stiffness: 180, mass: 0.8, useNativeDriver: true }).start();
   }, [index, seg, x]);
-  const pill = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   return (
     <View
       onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)}
@@ -230,20 +234,19 @@ export function Segmented<V extends string>({
     >
       {width > 0 && (
         <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 4,
-              bottom: 4,
-              left: 4,
-              width: seg - 8 / options.length,
-              borderRadius: 12,
-              backgroundColor: 'rgba(52,216,138,0.16)',
-              borderWidth: 1,
-              borderColor: 'rgba(52,216,138,0.35)',
-            },
-            pill,
-          ]}
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 4,
+            bottom: 4,
+            left: 4,
+            width: seg,
+            borderRadius: 12,
+            backgroundColor: 'rgba(52,216,138,0.16)',
+            borderWidth: 1,
+            borderColor: 'rgba(52,216,138,0.35)',
+            transform: [{ translateX: x }],
+          }}
         />
       )}
       {options.map((o) => {
@@ -255,7 +258,7 @@ export function Segmented<V extends string>({
               tap();
               onChange(o.value);
             }}
-            className="flex-1 flex-row items-center justify-center py-2"
+            className="flex-1 flex-row items-center justify-center py-2 active:opacity-70 active:scale-[0.97]"
           >
             {o.icon}
             <T
@@ -342,19 +345,36 @@ export function Stepper({
     tap();
     onChange(Math.min(max, Math.max(min, Math.round(v / step) * step)));
   };
-  const btn = 'h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05]';
+  const atMin = value - step < min - 1e-9;
+  const atMax = value + step > max + 1e-9;
+  const btn = 'h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] active:scale-90 active:bg-white/[0.12]';
   return (
     <View className={cn('rounded-2xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5', className)}>
       <T className="text-2xs text-[#8A9A93]">{label}</T>
       <View className="mt-1.5 flex-row items-center justify-between">
-        <Pressable accessibilityLabel={`Diminuisci ${label}`} onPress={() => set(value - step)} hitSlop={6} className={btn}>
+        <Pressable
+          accessibilityLabel={`Diminuisci ${label}`}
+          accessibilityState={{ disabled: atMin }}
+          disabled={atMin}
+          onPress={() => set(value - step)}
+          hitSlop={6}
+          className={cn('active:opacity-70 active:scale-[0.97]', btn, atMin && 'opacity-40')}
+        >
           <Minus size={14} color="#C9D4CF" />
         </Pressable>
-        <T className="mx-1 font-grotesk-b text-[17px]" style={{ color }}>
+        {/* keyed on the value so the number is redrawn on every change */}
+        <T key={value} className="mx-1 font-grotesk-b text-[17px]" style={{ color }}>
           {value.toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}
-          {unit && <T className="font-inter text-2xs text-[#8A9A93]"> {unit}</T>}
+          {unit ? ` ${unit}` : ''}
         </T>
-        <Pressable accessibilityLabel={`Aumenta ${label}`} onPress={() => set(value + step)} hitSlop={6} className={btn}>
+        <Pressable
+          accessibilityLabel={`Aumenta ${label}`}
+          accessibilityState={{ disabled: atMax }}
+          disabled={atMax}
+          onPress={() => set(value + step)}
+          hitSlop={6}
+          className={cn('active:opacity-70 active:scale-[0.97]', btn, atMax && 'opacity-40')}
+        >
           <Plus size={14} color="#C9D4CF" />
         </Pressable>
       </View>
@@ -389,7 +409,7 @@ export function Button({
         tap();
         onPress();
       }}
-      className={cn('flex-row items-center justify-center rounded-2xl px-4 py-3', disabled && 'opacity-40', className)}
+      className={cn('active:opacity-70 active:scale-[0.97]', 'flex-row items-center justify-center rounded-2xl px-4 py-3', disabled && 'opacity-40', className)}
       style={{
         backgroundColor: primary ? color : alpha(color, 0.1),
         borderWidth: 1,

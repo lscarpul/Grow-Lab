@@ -13,10 +13,12 @@ interface DrawerProps {
   accent?: string;
   header: ReactNode;
   children: ReactNode;
+  /** false for content that scrolls by itself, like a web page. */
+  scroll?: boolean;
 }
 
 /** Bottom sheet with blurred backdrop, spring entrance and drag-to-dismiss on the handle. */
-export function Drawer({ open, onClose, accent = '#34D88A', header, children }: DrawerProps) {
+export function Drawer({ open, onClose, accent = '#34D88A', header, children, scroll = true }: DrawerProps) {
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const sheetH = Math.min(height * 0.9, height - insets.top - 24);
@@ -120,20 +122,24 @@ export function Drawer({ open, onClose, accent = '#34D88A', header, children }: 
                 onClose();
               }}
               hitSlop={12}
-              className="ml-3 h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.06]"
+              className="ml-3 h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] active:opacity-70 active:scale-[0.97]"
             >
               <X size={17} color="#C9D4CF" />
             </Pressable>
           </View>
         </View>
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: (kb ? 16 : insets.bottom) + 40 }}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-        >
-          {children}
-        </ScrollView>
+        {scroll ? (
+          <ScrollView
+            contentContainerStyle={{ paddingBottom: (kb ? 16 : insets.bottom) + 40 }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+          >
+            {children}
+          </ScrollView>
+        ) : (
+          <View style={{ flex: 1, paddingBottom: kb ? 0 : insets.bottom }}>{children}</View>
+        )}
       </Animated.View>
     </Modal>
   );

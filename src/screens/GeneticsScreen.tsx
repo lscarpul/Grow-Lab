@@ -138,7 +138,7 @@ export function GeneticsScreen() {
               tap();
               if (compare.length >= 2) setCompareOpen(true);
             }}
-            className="flex-row items-center rounded-2xl border border-white/15 bg-[#13201F]/95 px-4 py-3"
+            className="flex-row items-center rounded-2xl border border-white/15 bg-[#13201F]/95 px-4 py-3 active:opacity-70 active:scale-[0.97]"
             style={{ shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 18, elevation: 12 }}
           >
             <GitCompareArrows size={18} color={C.leaf} />
@@ -148,7 +148,7 @@ export function GeneticsScreen() {
                 {compare.map((id) => CULTIVARS.find((c) => c.id === id)?.name).join(' · ')}
               </T>
             </View>
-            <Pressable onPress={() => setCompare([])} hitSlop={10}>
+            <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={() => setCompare([])} hitSlop={10}>
               <T className="font-inter-sb text-xs text-[#8A9A93]">Annulla</T>
             </Pressable>
           </Pressable>
@@ -176,7 +176,7 @@ function CultivarCard({
   const selected = compareIndex >= 0;
   const flower = c.seedToHarvestDays ?? c.floweringDays;
   return (
-    <Pressable onPress={onPress} onLongPress={onLongPress} delayLongPress={300}>
+    <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={onPress} onLongPress={onLongPress} delayLongPress={300}>
       <Glass className="p-4" style={selected ? { borderColor: COMPARE_COLORS[compareIndex], borderWidth: 1.5 } : undefined}>
         <View className="flex-row items-start">
           <View className="flex-1">
@@ -224,7 +224,7 @@ function CultivarCard({
               onPress={onLongPress}
               accessibilityLabel={`Confronta ${c.name}`}
               hitSlop={8}
-              className="h-8 w-8 items-center justify-center rounded-xl border"
+              className="h-8 w-8 items-center justify-center rounded-xl border active:opacity-70 active:scale-[0.97]"
               style={{
                 borderColor: selected ? COMPARE_COLORS[compareIndex] : 'rgba(255,255,255,0.1)',
                 backgroundColor: selected ? alpha(COMPARE_COLORS[compareIndex], 0.15) : 'rgba(255,255,255,0.04)',

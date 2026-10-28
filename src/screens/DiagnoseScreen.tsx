@@ -88,7 +88,7 @@ export function SymptomFinder() {
                     tap();
                     setZone(active ? null : z.id);
                   }}
-                  className={cn(
+                  className={cn('active:opacity-70 active:scale-[0.97]', 
                     'flex-row items-center justify-between rounded-xl px-3 py-2',
                     active ? 'bg-[#34D88A]/15' : 'bg-white/[0.03]',
                   )}
@@ -136,7 +136,7 @@ export function SymptomFinder() {
           const color = CAT_COLOR[p.category];
           return (
             <Enter i={5 + Math.min(i, 8)} key={p.id}>
-              <Pressable onPress={() => setOpen(p)}>
+              <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={() => setOpen(p)}>
                 <Glass className="flex-row p-4">
                   <View className="mr-3.5 w-1 rounded-full" style={{ backgroundColor: color }} />
                   <View className="flex-1">
@@ -269,7 +269,7 @@ export function ProblemDrawer({ problem: p, onClose }: { problem: Problem | null
                   tap();
                   setChecked((prev) => (on ? prev.filter((x) => x !== s) : [...prev, s]));
                 }}
-                className="flex-row items-start rounded-xl p-3"
+                className="flex-row items-start rounded-xl p-3 active:opacity-70 active:scale-[0.97]"
                 style={{
                   backgroundColor: on ? alpha(color, 0.1) : 'rgba(255,255,255,0.03)',
                   borderWidth: 1,

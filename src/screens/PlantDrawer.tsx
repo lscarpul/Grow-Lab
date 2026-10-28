@@ -252,7 +252,7 @@ export function PlantDrawer({ plant, onClose }: { plant: Plant | null; onClose: 
                   tap();
                   setMetric(k);
                 }}
-                className="rounded-full px-3 py-1.5"
+                className="rounded-full px-3 py-1.5 active:opacity-70 active:scale-[0.97]"
                 style={{
                   backgroundColor: k === m ? alpha(METRIC_COLOR[k], 0.16) : 'rgba(255,255,255,0.04)',
                   borderWidth: 1,
@@ -381,7 +381,7 @@ export function PlantDrawer({ plant, onClose }: { plant: Plant | null; onClose: 
                   tap();
                   addLog(p.id, q.kind, q.title, q.detail);
                 }}
-                className="flex-row items-center rounded-full px-3 py-2"
+                className="flex-row items-center rounded-full px-3 py-2 active:opacity-70 active:scale-[0.97]"
                 style={{ backgroundColor: alpha(meta.color, 0.1), borderWidth: 1, borderColor: alpha(meta.color, 0.3) }}
               >
                 <meta.Icon size={13} color={meta.color} />
@@ -564,7 +564,7 @@ function MeasureForm({
               tap();
               toggle(k);
             }}
-            className={cn(
+            className={cn('active:opacity-70 active:scale-[0.97]', 
               'rounded-full border px-3 py-1.5',
               on(k) ? 'border-[#38BDF8]/50 bg-[#38BDF8]/15' : 'border-white/10 bg-white/[0.03]',
             )}

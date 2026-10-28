@@ -4,25 +4,30 @@ import { ReactNode } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { cssInterop } from 'nativewind';
 import { stageById } from '../data/stages';
 import { StageId } from '../data/types';
 import { STAGE_COLOR } from '../theme/tokens';
 import { Badge, cn, Eyebrow, T, tap } from './ui';
 
-cssInterop(Animated.View, { className: 'style' });
-
-/** Staggered entrance used across all screens. */
+/**
+ * Staggered entrance used across all screens.
+ * The Reanimated view only gets plain styles (NativeWind's wrapper broke its animations on Android); the classes go on
+ * an inner View, and the outer view copies the few classes that affect its own size in the parent.
+ */
 export function Enter({ i = 0, children, className }: { i?: number; children: ReactNode; className?: string }) {
+  const width = className?.match(/\bw-\[(\d+(?:\.\d+)?%)\]/)?.[1];
+  const outer = { flex: /\bflex-1\b/.test(className ?? '') ? 1 : undefined, width: width as `${number}%` | undefined };
   return (
     <Animated.View
       entering={FadeInDown.delay(60 + i * 55)
         .duration(520)
         .springify()
         .damping(20)}
-      className={className}
+      style={outer}
     >
-      {children}
+      <View className={className} style={outer.flex ? { flex: 1 } : undefined}>
+        {children}
+      </View>
     </Animated.View>
   );
 }
@@ -70,7 +75,7 @@ export function StageBadge({ stage }: { stage: StageId }) {
 
 export type TabId = 'home' | 'piante' | 'kit' | 'genetiche' | 'guida' | 'strumenti';
 
-const TABS: { id: TabId; label: string; Icon: typeof House }[] = [
+export const TABS: { id: TabId; label: string; Icon: typeof House }[] = [
   { id: 'home', label: 'Home', Icon: House },
   { id: 'piante', label: 'Piante', Icon: Sprout },
   { id: 'kit', label: 'Kit', Icon: ShoppingBag },
@@ -102,7 +107,7 @@ export function TabBar({ tab, onChange, badges }: { tab: TabId; onChange: (t: Ta
                 tap();
                 onChange(id);
               }}
-              className={cn('flex-1 items-center rounded-[22px] py-2', active && 'bg-[#34D88A]/[0.14]')}
+              className={cn('active:opacity-70 active:scale-[0.97]', 'flex-1 items-center rounded-[22px] py-2', active && 'bg-[#34D88A]/[0.14]')}
             >
               <View>
                 <Icon size={20} color={active ? '#34D88A' : '#7D8C86'} strokeWidth={active ? 2.3 : 1.8} />
@@ -133,7 +138,7 @@ export function IconButton({ children, onPress, active }: { children: ReactNode;
         tap();
         onPress?.();
       }}
-      className={cn(
+      className={cn('active:opacity-70 active:scale-[0.97]', 
         'h-11 w-11 items-center justify-center rounded-2xl border',
         active ? 'border-[#34D88A]/40 bg-[#34D88A]/15' : 'border-white/10 bg-white/[0.05]',
       )}

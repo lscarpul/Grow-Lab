@@ -1,8 +1,10 @@
 import { Check, CircleCheck, CircleX, ExternalLink, Ruler, Sparkles, Store, Zap } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Linking, Pressable, ScrollView, View } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Donut, Ring } from '../components/charts';
 import { Drawer } from '../components/Drawer';
+import { openLink } from '../components/LinkSheet';
 import { Disclaimer, Enter, Screen } from '../components/layout';
 import { Badge, Bullet, Button, ChipRow, cn, Eyebrow, Glass, SectionHeader, Segmented, Stepper, T, tap } from '../components/ui';
 import { Cultivar, CULTIVARS } from '../data/cultivars';
@@ -31,10 +33,7 @@ const PRIORITY_TONE: Record<Priority, string> = { Essenziale: C.rose, Consigliat
 const BUDGET_LABEL: Record<Budget, string> = { base: 'Base', medio: 'Medio', pro: 'Pro' };
 const KWH_EUR = 0.3;
 
-const open = (url: string) => {
-  tap();
-  Linking.openURL(url).catch(() => undefined);
-};
+const open = openLink;
 
 export function KitScreen() {
   const [mode, setMode] = useState<Mode>('kit');
@@ -238,7 +237,7 @@ function KitList() {
         title="Lista della spesa"
         caption="Spunta quello che hai già · tocca per prodotti e consigli"
         right={
-          <Pressable
+          <Pressable className="active:opacity-70 active:scale-[0.97]"
             onPress={() => {
               tap();
               setHideOwned(!hideOwned);
@@ -282,12 +281,19 @@ function KitList() {
                           toggleOwned(i.id);
                         }}
                         hitSlop={8}
-                        className="mr-3 h-6 w-6 items-center justify-center rounded-lg border"
+                        className="mr-3 h-6 w-6 items-center justify-center rounded-lg border active:opacity-70 active:scale-[0.97]"
                         style={{ borderColor: has ? C.leaf : 'rgba(255,255,255,0.2)', backgroundColor: has ? C.leaf : 'transparent' }}
                       >
-                        {has && <Check size={14} color="#05080A" strokeWidth={3} />}
+                        {has && (
+                          <Animated.View entering={ZoomIn.springify().damping(11).stiffness(260)}>
+                            <Check size={14} color="#05080A" strokeWidth={3} />
+                          </Animated.View>
+                        )}
                       </Pressable>
-                      <Pressable className="flex-1" onPress={() => setItem(i)}>
+                      <Pressable
+                        className={cn('flex-1 active:opacity-70 active:scale-[0.97]', has && 'opacity-50')}
+                        onPress={() => setItem(i)}
+                      >
                         <View className="flex-row items-center">
                           <T className={cn('flex-1 font-inter-sb text-[13px]', has && 'text-[#56655F] line-through')} numberOfLines={1}>
                             {i.name}
@@ -332,7 +338,7 @@ function PickRow({ p, link = true }: { p: ShopPick; link?: boolean }) {
     <Pressable
       disabled={!link}
       onPress={() => open(p.url)}
-      className="flex-row items-center rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3"
+      className="flex-row items-center rounded-2xl border border-white/[0.07] bg-white/[0.03] p-3 active:opacity-70 active:scale-[0.97]"
     >
       <View className="h-9 w-9 items-center justify-center rounded-xl" style={{ backgroundColor: alpha(C.amber, 0.12) }}>
         <Store size={16} color={C.amber} />
@@ -480,7 +486,7 @@ function FromStrain({ onUseKit }: { onUseKit: () => void }) {
                 tap();
                 setId(x.id);
               }}
-              className={cn(
+              className={cn('active:opacity-70 active:scale-[0.97]', 
                 'w-[128px] rounded-2xl border p-3',
                 active ? 'border-[#34D88A]/50 bg-[#34D88A]/[0.12]' : 'border-white/[0.08] bg-white/[0.03]',
               )}
@@ -570,7 +576,7 @@ function OptionRow({ o, onUse }: { o: SpaceOption; onUse: () => void }) {
       : { c: C.rose, t: 'Troppo bassa' };
   const outdoor = o.energyCost === 0 && o.heightRoom === 999;
   return (
-    <Pressable onPress={onUse}>
+    <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={onUse}>
       <View
         className="rounded-2xl p-3.5"
         style={{
@@ -815,7 +821,7 @@ function FitCard({ f, rank }: { f: StrainFit; rank: number }) {
         ))}
       </View>
       {seed && (
-        <Pressable disabled={!SEED_LINKS} onPress={() => open(seed.url)} className="mt-2 flex-row items-center">
+        <Pressable disabled={!SEED_LINKS} onPress={() => open(seed.url)} className="mt-2 flex-row items-center active:opacity-70 active:scale-[0.97]">
           <Store size={12} color="#8A9A93" />
           <T className="ml-1.5 flex-1 text-2xs text-[#8A9A93]" numberOfLines={1}>
             {seed.name} · {seed.seeds} {seed.seeds > 1 ? 'semi' : 'seme'} {fmtEur(seed.price)} su {seed.shop}

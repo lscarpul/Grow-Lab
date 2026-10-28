@@ -125,7 +125,7 @@ export function AddPlantDrawer({ open, onClose }: { open: boolean; onClose: () =
                 setCultivarId(c.id);
                 if (isAuto) setPotL(11);
               }}
-              className={cn(
+              className={cn('active:opacity-70 active:scale-[0.97]', 
                 'w-[132px] rounded-2xl border p-3',
                 active ? 'border-[#34D88A]/50 bg-[#34D88A]/[0.12]' : 'border-white/[0.08] bg-white/[0.03]',
               )}
@@ -164,11 +164,12 @@ export function AddPlantDrawer({ open, onClose }: { open: boolean; onClose: () =
             <Chip key={s.id} label={s.label} active={space === s.label} onPress={() => setSpace(s.label)} />
           ))}
         </View>
-        <View className="mt-3 flex-row flex-wrap gap-2">
-          {MEDIA.filter((m) => (env === 'indoor' ? m !== 'Terra piena' : m !== 'Idroponica')).map((m) => (
-            <Chip key={m} label={m} active={medium === m} onPress={() => setMedium(m)} color={C.amber} />
-          ))}
-        </View>
+        <Segmented
+          className="mt-3"
+          value={medium}
+          onChange={setMedium}
+          options={MEDIA.filter((m) => (env === 'indoor' ? m !== 'Terra piena' : m !== 'Idroponica')).map((m) => ({ value: m, label: m }))}
+        />
         {medium !== 'Terra piena' && (
           <Stepper className="mt-3" label="Volume vaso" value={potL} onChange={setPotL} step={1} min={1} max={200} unit="L" />
         )}
@@ -196,15 +197,21 @@ export function AddPlantDrawer({ open, onClose }: { open: boolean; onClose: () =
             className="flex-1"
             label="Giorni dalla semina"
             value={sinceSow}
-            onChange={(v) => setSinceSow(Math.max(v, inStage))}
+            onChange={(v) => {
+              setSinceSow(v);
+              if (inStage > v) setInStage(v);
+            }}
             min={0}
             max={300}
           />
           <Stepper
             className="flex-1"
             label="Giorni in questa fase"
-            value={Math.min(inStage, sinceSow)}
-            onChange={(v) => setInStage(Math.min(v, sinceSow))}
+            value={inStage}
+            onChange={(v) => {
+              setInStage(v);
+              if (v > sinceSow) setSinceSow(v);
+            }}
             min={0}
             max={200}
             color={STAGE_COLOR[stage]}
@@ -245,7 +252,7 @@ function Chip({ label, active, onPress, color = C.leaf }: { label: string; activ
         tap();
         onPress();
       }}
-      className="rounded-full px-3.5 py-2"
+      className="rounded-full px-3.5 py-2 active:opacity-70 active:scale-[0.97]"
       style={{
         backgroundColor: active ? alpha(color, 0.16) : 'rgba(255,255,255,0.04)',
         borderWidth: 1,
