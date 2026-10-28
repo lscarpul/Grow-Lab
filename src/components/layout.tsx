@@ -75,9 +75,9 @@ export function StatusScrim({ height }: { height: number }) {
   return (
     <LinearGradient
       pointerEvents="none"
-      colors={['#05080A', 'rgba(5,8,10,0.92)', 'rgba(5,8,10,0)']}
-      locations={[0, 0.7, 1]}
-      style={{ position: 'absolute', left: 0, right: 0, top: 0, height: height + 14 }}
+      colors={['#05080A', '#05080A', 'rgba(5,8,10,0)']}
+      locations={[0, height / (height + 16), 1]}
+      style={{ position: 'absolute', left: 0, right: 0, top: 0, height: height + 16 }}
     />
   );
 }
