@@ -328,7 +328,7 @@ export function NutrientSection({ kit, set }: Props) {
                   className="mt-3"
                   tone="ghost"
                   color={C.sky}
-                  label="Scarica scheda nutrizione"
+                  label="Condividi scheda nutrizione"
                   icon={<Download size={15} color={C.sky} />}
                   onPress={() => share(l.id, pack)}
                 />
