@@ -23,6 +23,7 @@ import { cultivarById } from '../data/cultivars';
 import { Plant } from '../data/grows';
 import { buildKit, itemTotal, SPACES } from '../data/kit';
 import { fmtEur } from '../data/shop';
+import { nutrientById, SUBSTRATE_DEMAND } from '../data/nutrients';
 import { METRICS, MetricKey, STAGE_ORDER, STAGE_RANGES } from '../data/ranges';
 import { stageById } from '../data/stages';
 import { cycleProgress, envScore, latest, metricTrend, plantAlerts, plantTasks, series, stageProgress } from '../lib/insights';
@@ -40,9 +41,10 @@ function greeting(d = new Date()) {
 }
 
 const LIVING = ['germinazione', 'piantina', 'vegetativa', 'fioritura'];
+const BUDGET_LABEL = { base: 'Base', medio: 'Medio', pro: 'Pro' } as const;
 
 export function HomeScreen({ onNavigate }: { onNavigate: (t: TabId) => void }) {
-  const { plants, doneTasks, toggleTask, kit, owned } = useStore();
+  const { plants, doneTasks, toggleTask, kit, owned, restartOnboarding } = useStore();
   const [open, setOpen] = useState<Plant | null>(null);
   const living = plants.filter((p) => LIVING.includes(p.stage));
   const [focusId, setFocusId] = useState(living[0]?.id);
@@ -62,26 +64,46 @@ export function HomeScreen({ onNavigate }: { onNavigate: (t: TabId) => void }) {
   const kitItems = useMemo(() => buildKit(kit), [kit]);
   const kitOwned = kitItems.filter((i) => owned.includes(i.id));
   const kitLeft = kitItems.filter((i) => !owned.includes(i.id)).reduce((a, i) => a + itemTotal(i), 0);
+  const line = nutrientById(kit.nutrient?.line);
+  const setup = [
+    SPACES.find((x) => x.id === kit.space)?.label,
+    `Livello ${BUDGET_LABEL[kit.budget]}`,
+    SUBSTRATE_DEMAND[kit.medium].label,
+    line ? line.brand : null,
+  ].filter(Boolean);
   const kitCard = (
-    <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={() => onNavigate('kit')}>
-      <Glass className="p-4" glow={C.amber}>
+    <Glass className="p-4" glow={C.amber}>
+      <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={() => onNavigate('kit')}>
         <View className="flex-row items-center">
           <View className="h-10 w-10 items-center justify-center rounded-2xl" style={{ backgroundColor: alpha(C.amber, 0.15) }}>
             <ShoppingBag size={18} color={C.amber} />
           </View>
           <View className="ml-3 flex-1">
-            <T className="font-inter-sb text-[13px]">Il tuo kit · {SPACES.find((x) => x.id === kit.space)?.label}</T>
-            <T className="text-2xs text-[#8A9A93]">
-              {kitOwned.length}/{kitItems.length} articoli · mancano ~{fmtEur(Math.round(kitLeft))}
-            </T>
+            <T className="font-inter-sb text-[13px]">Il tuo setup</T>
+            <T className="text-2xs text-[#8A9A93]">{setup.join(' · ')}</T>
           </View>
           <ChevronRight size={16} color="#8A9A93" />
         </View>
-        <View className="mt-3">
-          <Progress value={kitItems.length ? kitOwned.length / kitItems.length : 0} color={C.amber} />
+        <View className="mt-3 flex-row items-center">
+          <View className="flex-1">
+            <Progress value={kitItems.length ? kitOwned.length / kitItems.length : 0} color={C.amber} />
+          </View>
+          <T className="ml-3 text-2xs text-[#8A9A93]">
+            {kitOwned.length}/{kitItems.length} articoli · mancano ~{fmtEur(Math.round(kitLeft))}
+          </T>
         </View>
-      </Glass>
-    </Pressable>
+      </Pressable>
+      <Pressable
+        className="mt-3 flex-row items-center border-t border-white/[0.06] pt-3 active:opacity-70"
+        onPress={() => {
+          tap();
+          restartOnboarding();
+        }}
+      >
+        <Sprout size={14} color={C.leaf} />
+        <T className="ml-1.5 font-inter-sb text-xs text-[#34D88A]">Nuova coltivazione guidata</T>
+      </Pressable>
+    </Glass>
   );
 
   if (!focus)

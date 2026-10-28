@@ -22,6 +22,8 @@ export interface KitConfig {
   cultivarId?: string; // strain used for the final yield estimate
   dehumidifier?: boolean;
   heater?: boolean;
+  /** Optional items the grower turned off during setup (e.g. no carbon filter when smell is not a problem). */
+  skip?: string[];
 }
 
 export const DEFAULT_KIT: KitConfig = { space: 'tenda80', budget: 'medio', plants: 3, kind: 'foto', medium: 'terra', kwhPrice: 0.3 };
@@ -266,7 +268,7 @@ export function buildKit(c: KitConfig): KitItem[] {
       when: 'Prima della semina',
     });
     add(
-      (c.budget !== 'base' || s.area >= 1) && {
+      (c.dehumidifier ?? (c.budget !== 'base' || s.area >= 1)) && {
         id: 'deumidificatore',
         name: 'Deumidificatore',
         category: 'Aria e clima',
@@ -674,7 +676,7 @@ export function buildKit(c: KitConfig): KitItem[] {
     when: 'Fine essiccazione',
   });
   return items
-    .filter((i) => i.qty > 0)
+    .filter((i) => i.qty > 0 && !c.skip?.includes(i.id))
     .map((i) => {
       const picks = picksFor(i.id, c.budget, s, space.short);
       return { ...i, picks, price: picks[0]?.price ?? i.unitPrice[c.budget] };

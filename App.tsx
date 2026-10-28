@@ -23,6 +23,7 @@ import { GeneticsScreen } from './src/screens/GeneticsScreen';
 import { GuideScreen } from './src/screens/GuideScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { KitScreen } from './src/screens/KitScreen';
+import { Onboarding } from './src/screens/Onboarding';
 import { PlantsScreen } from './src/screens/PlantsScreen';
 import { ToolsMode, ToolsScreen } from './src/screens/ToolsScreen';
 import { StoreProvider, useStore } from './src/state/store';
@@ -37,14 +38,22 @@ function Shell() {
     if (t !== 'strumenti') setToolsMode('foto');
     setTabState(t);
   };
-  const { plants, adult, confirmAdult } = useStore();
+  const { plants, adult, confirmAdult, onboarded } = useStore();
   const alertCount = useMemo(() => plants.flatMap(plantAlerts).length, [plants]);
-  if (adult === null) return <View className="flex-1 bg-[#05080A]" />;
+  if (adult === null || onboarded === null) return <View className="flex-1 bg-[#05080A]" />;
   if (!adult)
     return (
       <View className="flex-1 bg-[#05080A]">
         <Background />
         <AgeGate onConfirm={confirmAdult} />
+      </View>
+    );
+  // Nothing configured yet: welcome and the guided setup come before the dashboard.
+  if (!onboarded)
+    return (
+      <View className="flex-1 bg-[#05080A]">
+        <Background />
+        <Onboarding />
       </View>
     );
   return (

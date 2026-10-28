@@ -22,7 +22,7 @@ const GROUP_OF = (p: Plant): Group =>
   p.stage === 'fioritura' ? 'fioritura' : ['raccolta', 'essiccazione', 'concia'].includes(p.stage) ? 'post' : 'crescita';
 
 export function PlantsScreen() {
-  const { plants, showDemo, setShowDemo, userPlantCount } = useStore();
+  const { plants } = useStore();
   const [adding, setAdding] = useState(false);
   const [view, setView] = useState<'lista' | 'griglia'>('lista');
   const [groups, setGroups] = useState<Group[]>([]);
@@ -59,7 +59,7 @@ export function PlantsScreen() {
           </IconButton>
         }
       >
-        {userPlantCount === 0 && (
+        {plants.length === 0 && (
           <Enter i={1} className="mx-5 mt-5">
             <Pressable className="active:opacity-70 active:scale-[0.97]" onPress={() => setAdding(true)}>
               <Glass className="flex-row items-center p-4" glow={C.leaf}>
@@ -132,24 +132,6 @@ export function PlantsScreen() {
               { value: 'griglia', label: '', icon: <LayoutGrid size={16} color={view === 'griglia' ? C.leaf : '#8A9A93'} /> },
             ]}
           />
-        </Enter>
-
-        <Enter i={3} className="mx-5 mt-3">
-          <Pressable
-            onPress={() => {
-              tap();
-              setShowDemo(!showDemo);
-            }}
-            className="flex-row items-center justify-between rounded-2xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-2.5 active:opacity-70 active:scale-[0.97]"
-          >
-            <View className="flex-1 pr-3">
-              <T className="font-inter-sb text-xs">Piante d'esempio</T>
-              <T className="text-2xs text-[#8A9A93]">6 coltivazioni dimostrative con dati simulati</T>
-            </View>
-            <View className={cn('h-6 w-11 justify-center rounded-full px-0.5', showDemo ? 'bg-[#34D88A]' : 'bg-white/15')}>
-              <View className={cn('h-5 w-5 rounded-full bg-white', showDemo && 'self-end')} />
-            </View>
-          </Pressable>
         </Enter>
 
         {filtered.length === 0 && (
