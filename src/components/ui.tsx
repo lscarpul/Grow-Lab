@@ -42,11 +42,16 @@ export function Glass({ className, glow, intensity = 28, children, style, ...res
           shadowOpacity: glow ? 0.35 : 0.4,
           shadowRadius: glow ? 24 : 18,
           shadowOffset: { width: 0, height: 10 },
-          elevation: 6,
+          // Android draws the elevation shadow through a translucent background as an offset dark rectangle.
+          elevation: 0,
         },
         style,
       ]}
-      className={cn('overflow-hidden rounded-[26px] border border-white/[0.08] bg-[#0E161B]/70', className)}
+      className={cn(
+        'overflow-hidden rounded-[26px] border border-white/[0.08]',
+        Platform.OS === 'android' ? 'bg-[#0E161B]/90' : 'bg-[#0E161B]/70',
+        className,
+      )}
     >
       {Platform.OS !== 'android' && <BlurView intensity={intensity} tint="dark" style={StyleSheet.absoluteFill} />}
       <View

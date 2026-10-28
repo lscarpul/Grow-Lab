@@ -138,7 +138,7 @@ export function GeneticsScreen() {
               tap();
               if (compare.length >= 2) setCompareOpen(true);
             }}
-            className="flex-row items-center rounded-2xl border border-white/15 bg-[#13201F]/95 px-4 py-3 active:opacity-70 active:scale-[0.97]"
+            className="flex-row items-center rounded-2xl border border-white/15 bg-[#13201F] px-4 py-3 active:opacity-70 active:scale-[0.97]"
             style={{ shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 18, elevation: 12 }}
           >
             <GitCompareArrows size={18} color={C.leaf} />

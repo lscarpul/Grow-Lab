@@ -93,7 +93,11 @@ export function TabBar({ tab, onChange, badges }: { tab: TabId; onChange: (t: Ta
       className="items-center px-4"
     >
       <View
-        className="w-full max-w-[520px] flex-row overflow-hidden rounded-[28px] border border-white/10 bg-[#0B1316]/80 px-1.5 py-1.5"
+        className={cn(
+          'w-full max-w-[520px] flex-row overflow-hidden rounded-[28px] border border-white/10 px-1.5 py-1.5',
+          // no blur on Android: keep the bar opaque so page text doesn't show through
+          Platform.OS === 'android' ? 'bg-[#0B1316]' : 'bg-[#0B1316]/80',
+        )}
         style={{ shadowColor: '#000', shadowOpacity: 0.55, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 14 }}
       >
         {Platform.OS !== 'android' && <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />}

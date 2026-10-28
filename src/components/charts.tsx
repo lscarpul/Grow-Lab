@@ -188,7 +188,7 @@ export function AreaChart({ data, color, height = 150, unit = '', digits = 1, id
             borderRadius: 14,
             borderWidth: 1,
             borderColor: 'rgba(255,255,255,0.12)',
-            backgroundColor: 'rgba(14,22,27,0.94)',
+            backgroundColor: '#0E161B',
             padding: 10,
             shadowColor: '#000',
             shadowOpacity: 0.5,
