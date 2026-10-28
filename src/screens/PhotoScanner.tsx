@@ -397,12 +397,14 @@ function KeySettings({ open, onClose }: { open: boolean; onClose: () => void }) 
   const { aiKey, setAiKey } = useStore();
   const [draft, setDraft] = useState(aiKey);
   useEffect(() => setDraft(aiKey), [aiKey, open]);
-  const valid = /^AIza[0-9A-Za-z_-]{30,}$/.test(draft.trim());
+  // Google issues both the classic AIza… keys and the newer AQ.… ones: only check that it looks like a single token.
+  const valid = /^[0-9A-Za-z._-]{20,}$/.test(draft.trim());
   return (
     <Drawer
       open={open}
       onClose={onClose}
       accent={C.violet}
+      keyboardScrollToEnd
       header={
         <View>
           <Badge tone="violet" dot>
@@ -418,7 +420,7 @@ function KeySettings({ open, onClose }: { open: boolean; onClose: () => void }) 
       <View className="px-5">
         {[
           { n: 1, t: 'Apri Google AI Studio e accedi con il tuo account Google.' },
-          { n: 2, t: 'Tocca "Create API key" e copia la chiave (inizia con AIza…).' },
+          { n: 2, t: 'Tocca "Create API key" e copia la chiave (inizia con AIza… o AQ.…).' },
           { n: 3, t: 'Incollala qui sotto e salva. Fatto.' },
         ].map((s) => (
           <View key={s.n} className="mb-3 flex-row">
@@ -437,11 +439,23 @@ function KeySettings({ open, onClose }: { open: boolean; onClose: () => void }) 
           icon={<ExternalLink size={15} color={C.violet} />}
           onPress={() => Linking.openURL(KEY_URL)}
         />
+        <Glass className="mt-5 p-4">
+          <View className="flex-row items-center">
+            <Lock size={14} color="#9AA9A2" />
+            <Eyebrow className="ml-2">Da sapere</Eyebrow>
+          </View>
+          <T className="mt-2 text-xs leading-[18px] text-[#9FB0A9]">
+            • La chiave resta solo su questo telefono e la foto va direttamente da qui a Google.{'\n'}• Il piano gratuito di Gemini va bene
+            per i tuoi test, ma i termini Google non lo permettono per un'app offerta a utenti nell'UE: per la versione in vendita serve il
+            server con chiave a pagamento.{'\n'}• Con il piano gratuito Google può usare le immagini inviate per migliorare i suoi servizi.
+            {'\n'}• L'AI può sbagliare: usala come secondo parere insieme alle schede dei sintomi.
+          </T>
+        </Glass>
         <Eyebrow className="mt-5">La tua chiave</Eyebrow>
         <TextInput
           value={draft}
           onChangeText={setDraft}
-          placeholder="AIza…"
+          placeholder="AIza… / AQ.…"
           placeholderTextColor="#56655F"
           autoCapitalize="none"
           autoCorrect={false}
@@ -452,7 +466,7 @@ function KeySettings({ open, onClose }: { open: boolean; onClose: () => void }) 
           )}
         />
         {draft.length > 0 && !valid && (
-          <T className="mt-1.5 text-2xs text-[#FB7185]">Non sembra una chiave Gemini: dovrebbe iniziare con "AIza".</T>
+          <T className="mt-1.5 text-2xs text-[#FB7185]">Non sembra una chiave: incollala intera, senza spazi.</T>
         )}
         <View className="mt-3 flex-row gap-2">
           {aiKey ? (
@@ -480,18 +494,6 @@ function KeySettings({ open, onClose }: { open: boolean; onClose: () => void }) 
           />
         </View>
 
-        <Glass className="mt-6 p-4">
-          <View className="flex-row items-center">
-            <Lock size={14} color="#9AA9A2" />
-            <Eyebrow className="ml-2">Da sapere</Eyebrow>
-          </View>
-          <T className="mt-2 text-xs leading-[18px] text-[#9FB0A9]">
-            • La chiave resta solo su questo telefono e la foto va direttamente da qui a Google.{'\n'}• Il piano gratuito di Gemini va bene
-            per i tuoi test, ma i termini Google non lo permettono per un'app offerta a utenti nell'UE: per la versione in vendita serve il
-            server con chiave a pagamento.{'\n'}• Con il piano gratuito Google può usare le immagini inviate per migliorare i suoi servizi.
-            {'\n'}• L'AI può sbagliare: usala come secondo parere insieme alle schede dei sintomi.
-          </T>
-        </Glass>
       </View>
     </Drawer>
   );

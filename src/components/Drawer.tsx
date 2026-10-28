@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X } from 'lucide-react-native';
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ComponentRef, ReactNode, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Keyboard, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { alpha } from '../theme/tokens';
@@ -15,15 +15,21 @@ interface DrawerProps {
   children: ReactNode;
   /** false for content that scrolls by itself, like a web page. */
   scroll?: boolean;
+  /** Scroll to the bottom when the keyboard opens (for forms whose input and buttons are the last thing in the sheet). */
+  keyboardScrollToEnd?: boolean;
 }
 
 /** Bottom sheet with blurred backdrop, spring entrance and drag-to-dismiss on the handle. */
-export function Drawer({ open, onClose, accent = '#34D88A', header, children, scroll = true }: DrawerProps) {
+export function Drawer({ open, onClose, accent = '#34D88A', header, children, scroll = true, keyboardScrollToEnd }: DrawerProps) {
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const sheetH = Math.min(height * 0.9, height - insets.top - 24);
   // Modals on Android are not resized by the keyboard: lift the sheet above it so inputs stay visible.
   const [kb, setKb] = useState(0);
+  const scroller = useRef<ComponentRef<typeof ScrollView>>(null);
+  useEffect(() => {
+    if (kb && keyboardScrollToEnd) setTimeout(() => scroller.current?.scrollToEnd({ animated: true }), 60);
+  }, [kb, keyboardScrollToEnd]);
   useEffect(() => {
     const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => setKb(e.endCoordinates.height));
     const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKb(0));
@@ -130,6 +136,7 @@ export function Drawer({ open, onClose, accent = '#34D88A', header, children, sc
         </View>
         {scroll ? (
           <ScrollView
+            ref={scroller}
             contentContainerStyle={{ paddingBottom: (kb ? 16 : insets.bottom) + 40 }}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
